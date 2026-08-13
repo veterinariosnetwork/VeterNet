@@ -130,6 +130,11 @@
   .field.has-error input, .field.has-error select{ border-color: var(--alert); }
   .field.has-error .error{ display:block; }
 
+  .link-btn{
+    background:none; border:none; padding:0; color: var(--primary); font-weight:600;
+    text-decoration: underline; cursor:pointer; font-size:inherit; font-family:inherit;
+  }
+
   .btn{
     display:inline-flex; align-items:center; justify-content:center; gap:8px;
     padding: 10px 18px;
@@ -383,19 +388,35 @@
         <div class="name">VeterNet</div>
       </div>
       <p class="login-eyebrow">Acceso clínico</p>
-      <h1>Ingresa a tus expedientes</h1>
-      <p class="sub">Identifícate para consultar y registrar historiales clínicos.</p>
+      <h1 id="login-title">Ingresa a tus expedientes</h1>
+      <p class="sub" id="login-sub">Inicia sesión con tu correo y contraseña.</p>
 
-      <div class="field" id="field-doctor-name">
-        <label for="input-doctor-name">Nombre del médico</label>
-        <input type="text" id="input-doctor-name" placeholder="Dra. Ana Torres" autocomplete="off">
-        <p class="error">Escribe tu nombre para continuar.</p>
+      <div class="field" id="field-email">
+        <label for="input-email">Correo</label>
+        <input type="email" id="input-email" placeholder="nombre@clinica.com" autocomplete="username">
+        <p class="error">Ingresa un correo válido.</p>
+      </div>
+      <div class="field" id="field-password">
+        <label for="input-password">Contraseña</label>
+        <input type="password" id="input-password" placeholder="Mínimo 6 caracteres" autocomplete="current-password">
+        <p class="error">La contraseña debe tener al menos 6 caracteres.</p>
+      </div>
+      <div class="field hidden" id="field-signup-name">
+        <label for="input-signup-name">Tu nombre (aparecerá en las consultas)</label>
+        <input type="text" id="input-signup-name" placeholder="Dra. Ana Torres">
+        <p class="error">Escribe tu nombre.</p>
       </div>
 
-      <button class="btn btn-primary btn-block" id="btn-login" style="margin-top:6px;">
+      <button class="btn btn-primary btn-block" id="btn-submit" style="margin-top:6px;">
         Ingresar
       </button>
-      <p class="hint" style="text-align:center; margin-top:14px;">Todo el equipo comparte el mismo expediente de pacientes.</p>
+      <p class="login-error" id="login-error" style="display:none; color:var(--alert); font-size:13px; text-align:center; margin-top:10px;"></p>
+
+      <p class="hint" style="text-align:center; margin-top:14px;">
+        <span id="toggle-to-signup">¿No tienes cuenta? <button class="link-btn" id="btn-toggle-mode">Crear una</button></span>
+        <span id="toggle-to-login" class="hidden">¿Ya tienes cuenta? <button class="link-btn" id="btn-toggle-mode-2">Inicia sesión</button></span>
+      </p>
+      <p class="hint" style="text-align:center; margin-top:6px;">Solo correos autorizados por el administrador pueden crear cuenta.</p>
     </div>
   </div>
 
@@ -408,6 +429,7 @@
       </div>
       <div class="doctor">
         <span class="who">Conectado como <strong id="topbar-doctor-name">—</strong></span>
+        <button class="btn btn-ghost admin-only hidden" id="btn-manage-doctors">Médicos</button>
         <button class="btn btn-ghost" id="btn-logout">Cerrar sesión</button>
       </div>
     </div>
@@ -452,6 +474,7 @@
       </div>
       <div class="doctor">
         <span class="who">Conectado como <strong id="topbar-doctor-name-2">—</strong></span>
+        <button class="btn btn-ghost admin-only hidden" id="btn-manage-doctors-2">Médicos</button>
         <button class="btn btn-ghost" id="btn-logout-2">Cerrar sesión</button>
       </div>
     </div>
@@ -469,19 +492,49 @@
 
 <div class="toast" id="toast"></div>
 
+<!-- ============================================================
+     FIREBASE
+     1) Reemplaza firebaseConfig con el objeto que te dio la
+        consola de Firebase (Configuración del proyecto > tus apps > Web).
+     2) En Firebase Console activa: Authentication > Sign-in method >
+        Correo/contraseña, y Firestore Database.
+     3) Pega las reglas de seguridad de Firestore que te compartí
+        en el chat (colecciones: patients, consultations,
+        authorizedEmails, users).
+     ============================================================ -->
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
 <script>
 (function(){
 
+  /* ================== CONFIGURACIÓN DE FIREBASE ================== */
+  /* TODO: reemplaza estos valores con los de tu proyecto en Firebase Console */
+  var firebaseConfig = {
+    apiKey: "TU_API_KEY",
+    authDomain: "TU_PROYECTO.firebaseapp.com",
+    projectId: "TU_PROYECTO",
+    storageBucket: "TU_PROYECTO.appspot.com",
+    messagingSenderId: "TU_SENDER_ID",
+    appId: "TU_APP_ID"
+  };
+
+  var ADMIN_EMAIL = 'ingmarcosrodriguez31@gmail.com';
+
+  firebase.initializeApp(firebaseConfig);
+  var auth = firebase.auth();
+  var db = firebase.firestore();
+
   /* ================== ESTADO EN MEMORIA ================== */
-  var STORAGE_KEY = 'vetfolio-clinic-data';
   var state = {
-    doctorName: null,
+    user: null,          // {uid, email, name, role}
     patients: [],       // {id,name,species,sex,age,breed,sterilized,ownerName,ownerPhone,createdAt}
     consultations: [],  // {id,patientId,date,reason,exam:{...},hallazgos,diagPresuntivo,diagDefinitivo,tratamiento,proximaCita,doctor}
     searchTerm: '',
     speciesFilter: 'todos',
     currentPatientId: null,
-    loaded: false
+    loaded: false,
+    authMode: 'login'
   };
 
   function uid(prefix){
@@ -496,34 +549,95 @@
     showToast._tm = setTimeout(function(){ t.classList.remove('show'); }, 2600);
   }
 
-  /* ================== PERSISTENCIA ================== */
+  /* ================== PERSISTENCIA (FIRESTORE) ================== */
   async function loadData(){
     try{
-      var res = await window.storage.get(STORAGE_KEY, true);
-      if(res && res.value){
-        var parsed = JSON.parse(res.value);
-        state.patients = parsed.patients || [];
-        state.consultations = parsed.consultations || [];
-      }
+      var patientsSnap = await db.collection('patients').get();
+      state.patients = patientsSnap.docs.map(function(d){ return d.data(); });
+      var consultsSnap = await db.collection('consultations').get();
+      state.consultations = consultsSnap.docs.map(function(d){ return d.data(); });
     }catch(e){
-      // no existe aún la clave: primera vez que se usa la app
-      state.patients = [];
-      state.consultations = [];
+      console.error('Error cargando datos', e);
+      showToast('No se pudieron cargar los expedientes.');
     }
     state.loaded = true;
   }
 
-  async function saveData(){
+  async function savePatient(patient){
+    await db.collection('patients').doc(patient.id).set(patient);
+  }
+
+  async function saveConsultation(consult){
+    await db.collection('consultations').doc(consult.id).set(consult);
+  }
+
+  /* ================== AUTORIZACIÓN Y PERFIL ================== */
+  async function checkAuthorization(user){
+    if(user.email === ADMIN_EMAIL) return true;
     try{
-      await window.storage.set(STORAGE_KEY, JSON.stringify({
-        patients: state.patients,
-        consultations: state.consultations
-      }), true);
+      var doc = await db.collection('authorizedEmails').doc(user.email).get();
+      return doc.exists;
     }catch(e){
-      showToast('No se pudo guardar. Intenta de nuevo.');
-      console.error('Storage error', e);
+      console.error('Error verificando autorización', e);
+      return false;
     }
   }
+
+  async function ensureUserProfile(user){
+    var ref = db.collection('users').doc(user.uid);
+    var snap = await ref.get();
+    if(snap.exists) return snap.data();
+    var isAdmin = user.email === ADMIN_EMAIL;
+    var nameInput = document.getElementById('input-signup-name').value.trim();
+    var profile = {
+      uid: user.uid,
+      email: user.email,
+      name: nameInput || user.email,
+      role: isAdmin ? 'admin' : 'doctor',
+      createdAt: new Date().toISOString()
+    };
+    await ref.set(profile);
+    return profile;
+  }
+
+  function toggleAdminUI(){
+    var isAdmin = !!(state.user && state.user.role === 'admin');
+    Array.prototype.forEach.call(document.querySelectorAll('.admin-only'), function(el){
+      el.classList.toggle('hidden', !isAdmin);
+    });
+  }
+
+  auth.onAuthStateChanged(async function(user){
+    if(!user){
+      state.user = null;
+      state.loaded = false;
+      showScreen('screen-login');
+      return;
+    }
+    showScreen('screen-dashboard');
+    document.getElementById('patients-container').innerHTML = '<div class="loading-state">Cargando expedientes…</div>';
+    try{
+      var authorized = await checkAuthorization(user);
+      if(!authorized){
+        await auth.signOut();
+        showLoginError('Tu correo no está autorizado. Pide al administrador que te agregue.');
+        showScreen('screen-login');
+        return;
+      }
+      var profile = await ensureUserProfile(user);
+      state.user = { uid: user.uid, email: user.email, name: profile.name, role: profile.role };
+      document.getElementById('topbar-doctor-name').textContent = state.user.name;
+      document.getElementById('topbar-doctor-name-2').textContent = state.user.name;
+      toggleAdminUI();
+      if(!state.loaded){
+        await loadData();
+      }
+      renderDashboard();
+    }catch(e){
+      console.error(e);
+      showToast('Ocurrió un error al iniciar sesión.');
+    }
+  });
 
   /* ================== NAVEGACIÓN ================== */
   function showScreen(id){
@@ -532,38 +646,99 @@
     });
   }
 
-  /* ================== LOGIN ================== */
-  document.getElementById('btn-login').addEventListener('click', doLogin);
-  document.getElementById('input-doctor-name').addEventListener('keydown', function(e){
-    if(e.key === 'Enter') doLogin();
-  });
-
-  async function doLogin(){
-    var input = document.getElementById('input-doctor-name');
-    var field = document.getElementById('field-doctor-name');
-    var name = input.value.trim();
-    if(!name){
-      field.classList.add('has-error');
-      return;
-    }
-    field.classList.remove('has-error');
-    state.doctorName = name;
-    document.getElementById('topbar-doctor-name').textContent = name;
-    document.getElementById('topbar-doctor-name-2').textContent = name;
-
-    if(!state.loaded){
-      showScreen('screen-dashboard');
-      document.getElementById('patients-container').innerHTML = '<div class="loading-state">Cargando expedientes…</div>';
-      await loadData();
-    }
-    renderDashboard();
-    showScreen('screen-dashboard');
+  /* ================== LOGIN / REGISTRO ================== */
+  function setAuthMode(mode){
+    state.authMode = mode;
+    var isSignup = mode === 'signup';
+    document.getElementById('field-signup-name').classList.toggle('hidden', !isSignup);
+    document.getElementById('toggle-to-signup').classList.toggle('hidden', isSignup);
+    document.getElementById('toggle-to-login').classList.toggle('hidden', !isSignup);
+    document.getElementById('login-title').textContent = isSignup ? 'Crea tu cuenta' : 'Ingresa a tus expedientes';
+    document.getElementById('login-sub').textContent = isSignup
+      ? 'Tu correo debe estar autorizado por el administrador antes de registrarte.'
+      : 'Inicia sesión con tu correo y contraseña.';
+    document.getElementById('btn-submit').textContent = isSignup ? 'Crear cuenta' : 'Ingresar';
+    hideLoginError();
   }
 
+  function showLoginError(msg){
+    var el = document.getElementById('login-error');
+    el.textContent = msg;
+    el.style.display = 'block';
+  }
+  function hideLoginError(){
+    document.getElementById('login-error').style.display = 'none';
+  }
+  function toggleFieldError2(id, hasError){
+    var el = document.getElementById(id);
+    if(el) el.classList.toggle('has-error', !!hasError);
+  }
+
+  function translateAuthError(e){
+    var code = e && e.code;
+    if(code === 'auth/user-not-found' || code === 'auth/wrong-password' || code === 'auth/invalid-credential') return 'Correo o contraseña incorrectos.';
+    if(code === 'auth/email-already-in-use') return 'Ya existe una cuenta con este correo. Intenta iniciar sesión.';
+    if(code === 'auth/weak-password') return 'La contraseña es muy débil (mínimo 6 caracteres).';
+    if(code === 'auth/invalid-email') return 'El correo no es válido.';
+    return 'Ocurrió un error. Intenta de nuevo.';
+  }
+
+  async function handleAuthSubmit(){
+    var email = document.getElementById('input-email').value.trim();
+    var password = document.getElementById('input-password').value;
+    var ok = true;
+    var emailBad = !email || email.indexOf('@') === -1;
+    toggleFieldError2('field-email', emailBad); if(emailBad) ok = false;
+    var passBad = !password || password.length < 6;
+    toggleFieldError2('field-password', passBad); if(passBad) ok = false;
+
+    var nameInput = null;
+    if(state.authMode === 'signup'){
+      nameInput = document.getElementById('input-signup-name').value.trim();
+      toggleFieldError2('field-signup-name', !nameInput); if(!nameInput) ok = false;
+    }
+    if(!ok) return;
+
+    hideLoginError();
+    var btn = document.getElementById('btn-submit');
+    var originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = state.authMode === 'signup' ? 'Creando cuenta…' : 'Ingresando…';
+
+    try{
+      if(state.authMode === 'signup'){
+        var isAllowed = email === ADMIN_EMAIL;
+        if(!isAllowed){
+          var authDoc = await db.collection('authorizedEmails').doc(email).get();
+          isAllowed = authDoc.exists;
+        }
+        if(!isAllowed){
+          showLoginError('Este correo no está autorizado todavía. Pide al administrador que te agregue primero.');
+          btn.disabled = false; btn.textContent = originalText;
+          return;
+        }
+        await auth.createUserWithEmailAndPassword(email, password);
+      } else {
+        await auth.signInWithEmailAndPassword(email, password);
+      }
+      // El resto del flujo (perfil, carga de datos) lo maneja onAuthStateChanged
+    }catch(e){
+      console.error(e);
+      showLoginError(translateAuthError(e));
+      btn.disabled = false;
+      btn.textContent = originalText;
+    }
+  }
+
+  document.getElementById('btn-submit').addEventListener('click', handleAuthSubmit);
+  document.getElementById('input-password').addEventListener('keydown', function(e){
+    if(e.key === 'Enter') handleAuthSubmit();
+  });
+  document.getElementById('btn-toggle-mode').addEventListener('click', function(e){ e.preventDefault(); setAuthMode('signup'); });
+  document.getElementById('btn-toggle-mode-2').addEventListener('click', function(e){ e.preventDefault(); setAuthMode('login'); });
+
   function logout(){
-    state.doctorName = null;
-    document.getElementById('input-doctor-name').value = '';
-    showScreen('screen-login');
+    auth.signOut();
   }
   document.getElementById('btn-logout').addEventListener('click', logout);
   document.getElementById('btn-logout-2').addEventListener('click', logout);
@@ -794,14 +969,20 @@
         ownerPhone: ownerPhone,
         createdAt: new Date().toISOString()
       };
-      state.patients.push(patient);
       var saveBtn = overlay.querySelector('#np-save');
       saveBtn.disabled = true; saveBtn.textContent = 'Guardando…';
-      await saveData();
-      close();
-      showToast('Paciente registrado.');
-      renderDashboard();
-      openPatientDetail(patient.id);
+      try{
+        await savePatient(patient);
+        state.patients.push(patient);
+        close();
+        showToast('Paciente registrado.');
+        renderDashboard();
+        openPatientDetail(patient.id);
+      }catch(e){
+        console.error(e);
+        showToast('No se pudo guardar el paciente.');
+        saveBtn.disabled = false; saveBtn.textContent = 'Guardar paciente';
+      }
     });
   }
 
@@ -1058,16 +1239,129 @@
         diagDefinitivo: overlay.querySelector('#nc-diag-definitivo').value.trim(),
         tratamiento: overlay.querySelector('#nc-tratamiento').value.trim(),
         proximaCita: overlay.querySelector('#nc-next-date').value || null,
-        doctor: state.doctorName
+        doctor: state.user ? state.user.name : ''
       };
 
-      state.consultations.push(consult);
       var saveBtn = overlay.querySelector('#nc-save');
       saveBtn.disabled = true; saveBtn.textContent = 'Guardando…';
-      await saveData();
-      close();
-      showToast('Consulta registrada.');
-      renderPatientDetail();
+      try{
+        await saveConsultation(consult);
+        state.consultations.push(consult);
+        close();
+        showToast('Consulta registrada.');
+        renderPatientDetail();
+      }catch(e){
+        console.error(e);
+        showToast('No se pudo guardar la consulta.');
+        saveBtn.disabled = false; saveBtn.textContent = 'Guardar consulta';
+      }
+    });
+  }
+
+  /* ================== ADMIN: GESTIÓN DE MÉDICOS ================== */
+  document.getElementById('btn-manage-doctors').addEventListener('click', openManageDoctorsModal);
+  document.getElementById('btn-manage-doctors-2').addEventListener('click', openManageDoctorsModal);
+
+  async function openManageDoctorsModal(){
+    var overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML =
+      '<div class="modal">' +
+        '<div class="modal-header">' +
+          '<div><h2>Médicos autorizados</h2><p class="sub">Solo estos correos pueden crear una cuenta</p></div>' +
+          '<button class="modal-close" id="md-close" aria-label="Cerrar">' +
+            '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 6l12 12M18 6L6 18"/></svg>' +
+          '</button>' +
+        '</div>' +
+        '<div class="modal-body">' +
+          '<div class="form-section">' +
+            '<p class="sec-title"><span class="num">1</span>Agregar médico</p>' +
+            '<div class="form-grid">' +
+              '<div class="field" id="f-md-email"><label>Correo</label><input id="md-email" placeholder="doctor@clinica.com"><p class="error">Ingresa un correo válido.</p></div>' +
+              '<div class="field"><label>Rol</label><select id="md-role"><option value="doctor">Médico</option><option value="admin">Administrador</option></select></div>' +
+            '</div>' +
+            '<button class="btn btn-accent" id="md-add" style="margin-top:10px;">Agregar acceso</button>' +
+          '</div>' +
+          '<div class="form-section">' +
+            '<p class="sec-title"><span class="num">2</span>Con acceso actualmente</p>' +
+            '<div id="md-list"><div class="loading-state">Cargando…</div></div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="modal-footer">' +
+          '<button class="btn" id="md-cancel">Cerrar</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(overlay);
+
+    function close(){ overlay.remove(); }
+    overlay.addEventListener('click', function(e){ if(e.target === overlay) close(); });
+    overlay.querySelector('#md-close').addEventListener('click', close);
+    overlay.querySelector('#md-cancel').addEventListener('click', close);
+
+    async function renderDoctorsList(){
+      var listEl = overlay.querySelector('#md-list');
+      listEl.innerHTML = '<div class="loading-state">Cargando…</div>';
+      try{
+        var snap = await db.collection('authorizedEmails').get();
+        var rows = snap.docs.map(function(d){ return d.data(); });
+        rows.sort(function(a,b){ return (a.email || '').localeCompare(b.email || ''); });
+        if(!rows.length){
+          listEl.innerHTML = '<p class="hint">Todavía no has agregado a nadie más. El administrador (' + escapeHtml(ADMIN_EMAIL) + ') siempre tiene acceso.</p>';
+          return;
+        }
+        listEl.innerHTML = rows.map(function(r){
+          return '<div class="kv-item" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">' +
+            '<div><div class="v" style="font-family:var(--font-body); font-weight:600; font-size:13.5px;">' + escapeHtml(r.email) + '</div>' +
+            '<div class="k">' + (r.role === 'admin' ? 'Administrador' : 'Médico') + '</div></div>' +
+            '<button class="btn btn-danger" data-remove="' + escapeHtml(r.email) + '" style="padding:6px 10px; font-size:12.5px;">Quitar acceso</button>' +
+          '</div>';
+        }).join('');
+        Array.prototype.forEach.call(listEl.querySelectorAll('[data-remove]'), function(btn){
+          btn.addEventListener('click', async function(){
+            var email = btn.getAttribute('data-remove');
+            btn.disabled = true; btn.textContent = 'Quitando…';
+            try{
+              await db.collection('authorizedEmails').doc(email).delete();
+              showToast('Acceso retirado.');
+              renderDoctorsList();
+            }catch(e){
+              console.error(e);
+              showToast('No se pudo quitar el acceso.');
+              btn.disabled = false; btn.textContent = 'Quitar acceso';
+            }
+          });
+        });
+      }catch(e){
+        console.error(e);
+        listEl.innerHTML = '<p class="hint">No se pudo cargar la lista.</p>';
+      }
+    }
+    renderDoctorsList();
+
+    overlay.querySelector('#md-add').addEventListener('click', async function(){
+      var email = overlay.querySelector('#md-email').value.trim().toLowerCase();
+      var role = overlay.querySelector('#md-role').value;
+      var emailBad = !email || email.indexOf('@') === -1;
+      toggleFieldError(overlay, 'f-md-email', emailBad);
+      if(emailBad) return;
+
+      var btn = overlay.querySelector('#md-add');
+      btn.disabled = true; btn.textContent = 'Agregando…';
+      try{
+        await db.collection('authorizedEmails').doc(email).set({
+          email: email,
+          role: role,
+          addedBy: state.user ? state.user.email : null,
+          addedAt: new Date().toISOString()
+        });
+        overlay.querySelector('#md-email').value = '';
+        showToast('Médico autorizado. Ya puede crear su cuenta.');
+        renderDoctorsList();
+      }catch(e){
+        console.error(e);
+        showToast('No se pudo agregar el acceso.');
+      }
+      btn.disabled = false; btn.textContent = 'Agregar acceso';
     });
   }
 
