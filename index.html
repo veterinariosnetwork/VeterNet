@@ -183,6 +183,48 @@
 
   main.dash{ flex:1; padding: 28px; max-width: 1180px; width:100%; margin: 0 auto; }
 
+  .dash-grid{ display:grid; grid-template-columns: 1fr 300px; gap:24px; align-items:start; }
+  @media (max-width: 880px){ .dash-grid{ grid-template-columns: 1fr; } }
+
+  .calendar-widget{
+    background: var(--surface); border:1px solid var(--line); border-radius: var(--radius-lg);
+    padding: 16px; position: sticky; top: 20px;
+  }
+  .calendar-widget .cal-header{
+    display:flex; align-items:center; justify-content:space-between; margin-bottom:12px;
+  }
+  .calendar-widget .cal-title{ font-family: var(--font-display); font-weight:600; font-size:15px; text-transform:capitalize; }
+  .calendar-widget .cal-nav{ display:flex; gap:4px; }
+  .calendar-widget .cal-nav button{
+    border:1px solid var(--line); background: var(--surface); border-radius:6px; width:26px; height:26px;
+    display:flex; align-items:center; justify-content:center; color: var(--ink-soft);
+  }
+  .calendar-widget .cal-nav button:hover{ background: var(--surface-sunken); }
+  .cal-grid{ display:grid; grid-template-columns: repeat(7, 1fr); gap:3px; }
+  .cal-dow{ font-size:10.5px; text-align:center; color: var(--ink-faint); font-weight:600; padding-bottom:4px; }
+  .cal-day{
+    aspect-ratio: 1; display:flex; align-items:center; justify-content:center; font-size:12.5px;
+    border-radius:7px; color: var(--ink-soft); position:relative; cursor:default;
+  }
+  .cal-day.empty{ visibility:hidden; }
+  .cal-day.today{ font-weight:700; color: var(--primary); box-shadow: inset 0 0 0 1.5px var(--primary); }
+  .cal-day.has-cita{ background: var(--accent-soft); color: var(--accent); font-weight:700; cursor:pointer; }
+  .cal-day.has-cita:hover{ filter:brightness(0.95); }
+  .cal-day.selected{ background: var(--accent); color:#fff; }
+  .cal-legend{ font-size:11.5px; color: var(--ink-faint); margin-top:10px; display:flex; align-items:center; gap:6px; }
+  .cal-legend .dot{ width:8px; height:8px; border-radius:50%; background: var(--accent); display:inline-block; }
+  .cal-upcoming{ margin-top:14px; border-top:1px solid var(--line); padding-top:12px; }
+  .cal-upcoming .cal-up-title{ font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color: var(--ink-faint); margin-bottom:8px; }
+  .cal-up-item{
+    padding:8px 10px; border-radius:8px; background: var(--surface-sunken); margin-bottom:6px; cursor:pointer;
+  }
+  .cal-up-item:hover{ background: var(--primary-soft); }
+  .cal-up-item .d{ font-size:11px; color: var(--accent); font-weight:700; }
+  .cal-up-item .p{ font-size:13px; font-weight:600; color: var(--ink); }
+  .cal-up-item .r{ font-size:11.5px; color: var(--ink-soft); }
+  .cal-empty-msg{ font-size:12.5px; color: var(--ink-faint); text-align:center; padding:10px 0; }
+
+
   .dash-header{
     display:flex; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:22px; flex-wrap:wrap;
   }
@@ -435,33 +477,38 @@
     </div>
 
     <main class="dash">
-      <div class="dash-header">
-        <div>
-          <p class="eyebrow">Expedientes clínicos</p>
-          <h1>Pacientes</h1>
+      <div class="dash-grid">
+        <div class="dash-main">
+          <div class="dash-header">
+            <div>
+              <p class="eyebrow">Expedientes clínicos</p>
+              <h1>Pacientes</h1>
+            </div>
+            <button class="btn btn-accent" id="btn-open-new-patient">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+              Nuevo paciente
+            </button>
+          </div>
+
+          <div class="stats-row" id="stats-row"></div>
+
+          <div class="toolbar">
+            <div class="search-box">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+              <input type="text" id="search-input" placeholder="Buscar por nombre de mascota o propietario…">
+            </div>
+            <div class="filter-chip" id="species-filter">
+              <button class="active" data-species="todos">Todos</button>
+              <button data-species="canino">Caninos</button>
+              <button data-species="felino">Felinos</button>
+              <button data-species="otro">Otros</button>
+            </div>
+          </div>
+
+          <div id="patients-container"></div>
         </div>
-        <button class="btn btn-accent" id="btn-open-new-patient">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-          Nuevo paciente
-        </button>
+        <div class="calendar-widget" id="calendar-widget"></div>
       </div>
-
-      <div class="stats-row" id="stats-row"></div>
-
-      <div class="toolbar">
-        <div class="search-box">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-          <input type="text" id="search-input" placeholder="Buscar por nombre de mascota o propietario…">
-        </div>
-        <div class="filter-chip" id="species-filter">
-          <button class="active" data-species="todos">Todos</button>
-          <button data-species="canino">Caninos</button>
-          <button data-species="felino">Felinos</button>
-          <button data-species="otro">Otros</button>
-        </div>
-      </div>
-
-      <div id="patients-container"></div>
     </main>
   </div>
 
@@ -535,7 +582,8 @@
     speciesFilter: 'todos',
     currentPatientId: null,
     loaded: false,
-    authMode: 'login'
+    authMode: 'login',
+    calendarViewDate: new Date()
   };
 
   function uid(prefix){
@@ -827,6 +875,107 @@
       '<div class="stat-card"><div class="num">' + upcoming + '</div><div class="label">Próximas citas agendadas</div></div>';
   }
 
+  var DOW_LABELS = ['D','L','M','M','J','V','S'];
+  var MONTH_LABELS = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+
+  function citasByDateMap(){
+    var map = {};
+    state.consultations.forEach(function(c){
+      if(!c.proximaCita) return;
+      if(!map[c.proximaCita]) map[c.proximaCita] = [];
+      var patient = state.patients.filter(function(p){ return p.id === c.patientId; })[0];
+      map[c.proximaCita].push({ consult: c, patient: patient });
+    });
+    return map;
+  }
+
+  function renderCalendar(){
+    var el = document.getElementById('calendar-widget');
+    if(!el) return;
+    var viewDate = state.calendarViewDate;
+    var year = viewDate.getFullYear();
+    var month = viewDate.getMonth();
+    var citasMap = citasByDateMap();
+
+    var today = new Date(); today.setHours(0,0,0,0);
+    var todayStr = today.toISOString().slice(0,10);
+
+    var firstDay = new Date(year, month, 1);
+    var startWeekday = firstDay.getDay();
+    var daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    var cellsHtml = '';
+    for(var i = 0; i < startWeekday; i++){
+      cellsHtml += '<div class="cal-day empty"></div>';
+    }
+    for(var day = 1; day <= daysInMonth; day++){
+      var dateStr = year + '-' + String(month+1).padStart(2,'0') + '-' + String(day).padStart(2,'0');
+      var hasCita = !!citasMap[dateStr];
+      var classes = 'cal-day';
+      if(dateStr === todayStr) classes += ' today';
+      if(hasCita) classes += ' has-cita';
+      cellsHtml += '<div class="' + classes + '" data-date="' + dateStr + '">' + day + '</div>';
+    }
+
+    var dowHtml = DOW_LABELS.map(function(d){ return '<div class="cal-dow">' + d + '</div>'; }).join('');
+
+    // Próximas citas (desde hoy en adelante), máximo 6
+    var upcomingList = [];
+    Object.keys(citasMap).forEach(function(dateStr){
+      if(dateStr >= todayStr){
+        citasMap[dateStr].forEach(function(item){
+          upcomingList.push({ date: dateStr, item: item });
+        });
+      }
+    });
+    upcomingList.sort(function(a,b){ return a.date.localeCompare(b.date); });
+    upcomingList = upcomingList.slice(0, 6);
+
+    var upcomingHtml;
+    if(!upcomingList.length){
+      upcomingHtml = '<p class="cal-empty-msg">No hay próximas citas agendadas.</p>';
+    } else {
+      upcomingHtml = upcomingList.map(function(u){
+        var pname = u.item.patient ? escapeHtml(u.item.patient.name) : 'Paciente';
+        var reason = escapeHtml(u.item.consult.reason || '');
+        return '<div class="cal-up-item" data-goto="' + u.item.consult.patientId + '">' +
+          '<div class="d">' + fmtDate(u.date) + '</div>' +
+          '<div class="p">' + pname + '</div>' +
+          '<div class="r">' + reason + '</div>' +
+        '</div>';
+      }).join('');
+    }
+
+    el.innerHTML =
+      '<div class="cal-header">' +
+        '<div class="cal-title">' + MONTH_LABELS[month] + ' ' + year + '</div>' +
+        '<div class="cal-nav">' +
+          '<button id="cal-prev" aria-label="Mes anterior"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M15 18l-6-6 6-6"/></svg></button>' +
+          '<button id="cal-next" aria-label="Mes siguiente"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M9 18l6-6-6-6"/></svg></button>' +
+        '</div>' +
+      '</div>' +
+      '<div class="cal-grid">' + dowHtml + cellsHtml + '</div>' +
+      '<div class="cal-legend"><span class="dot"></span> Día con cita programada</div>' +
+      '<div class="cal-upcoming">' +
+        '<div class="cal-up-title">Próximas citas</div>' +
+        upcomingHtml +
+      '</div>';
+
+    document.getElementById('cal-prev').addEventListener('click', function(){
+      state.calendarViewDate = new Date(year, month - 1, 1);
+      renderCalendar();
+    });
+    document.getElementById('cal-next').addEventListener('click', function(){
+      state.calendarViewDate = new Date(year, month + 1, 1);
+      renderCalendar();
+    });
+    Array.prototype.forEach.call(el.querySelectorAll('[data-goto]'), function(node){
+      node.addEventListener('click', function(){
+        openPatientDetail(node.getAttribute('data-goto'));
+      });
+    });
+  }
+
   function renderPatientsList(){
     var container = document.getElementById('patients-container');
     var term = state.searchTerm.trim().toLowerCase();
@@ -918,6 +1067,7 @@
   function renderDashboard(){
     renderStats();
     renderPatientsList();
+    renderCalendar();
   }
 
   /* ================== MODAL: NUEVO PACIENTE ================== */
