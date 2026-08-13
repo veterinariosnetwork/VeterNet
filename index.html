@@ -969,8 +969,52 @@
       state.calendarViewDate = new Date(year, month + 1, 1);
       renderCalendar();
     });
+    Array.prototype.forEach.call(el.querySelectorAll('.cal-day.has-cita'), function(node){
+      node.addEventListener('click', function(){
+        openDayCitasModal(node.getAttribute('data-date'), citasMap[node.getAttribute('data-date')]);
+      });
+    });
     Array.prototype.forEach.call(el.querySelectorAll('[data-goto]'), function(node){
       node.addEventListener('click', function(){
+        openPatientDetail(node.getAttribute('data-goto'));
+      });
+    });
+  }
+
+  function openDayCitasModal(dateStr, items){
+    var overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    var itemsHtml = items.map(function(item){
+      var pname = item.patient ? escapeHtml(item.patient.name) : 'Paciente';
+      var owner = item.patient ? escapeHtml(item.patient.ownerName || '') : '';
+      var reason = escapeHtml(item.consult.reason || '');
+      return '<div class="cal-up-item" data-goto="' + item.consult.patientId + '" style="margin-bottom:8px;">' +
+        '<div class="p">' + pname + (owner ? ' <span style="font-weight:400;color:var(--ink-faint);">· ' + owner + '</span>' : '') + '</div>' +
+        '<div class="r">' + reason + '</div>' +
+      '</div>';
+    }).join('');
+    overlay.innerHTML =
+      '<div class="modal" style="max-width:420px;">' +
+        '<div class="modal-header">' +
+          '<div><h2>Citas del ' + fmtDate(dateStr) + '</h2><p class="sub">' + items.length + ' ' + (items.length === 1 ? 'cita programada' : 'citas programadas') + '</p></div>' +
+          '<button class="modal-close" id="dc-close" aria-label="Cerrar">' +
+            '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 6l12 12M18 6L6 18"/></svg>' +
+          '</button>' +
+        '</div>' +
+        '<div class="modal-body">' + itemsHtml + '</div>' +
+        '<div class="modal-footer">' +
+          '<button class="btn" id="dc-cancel">Cerrar</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(overlay);
+
+    function close(){ overlay.remove(); }
+    overlay.addEventListener('click', function(e){ if(e.target === overlay) close(); });
+    overlay.querySelector('#dc-close').addEventListener('click', close);
+    overlay.querySelector('#dc-cancel').addEventListener('click', close);
+    Array.prototype.forEach.call(overlay.querySelectorAll('[data-goto]'), function(node){
+      node.addEventListener('click', function(){
+        close();
         openPatientDetail(node.getAttribute('data-goto'));
       });
     });
