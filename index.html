@@ -484,10 +484,16 @@
               <p class="eyebrow">Expedientes clínicos</p>
               <h1>Pacientes</h1>
             </div>
-            <button class="btn btn-accent" id="btn-open-new-patient">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-              Nuevo paciente
-            </button>
+            <div style="display:flex; gap:10px;">
+              <button class="btn btn-ghost" id="btn-open-quick-appt">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                Cita rápida
+              </button>
+              <button class="btn btn-accent" id="btn-open-new-patient">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                Nuevo paciente
+              </button>
+            </div>
           </div>
 
           <div class="stats-row" id="stats-row"></div>
@@ -829,6 +835,7 @@
     renderPatientsList();
   });
   document.getElementById('btn-open-new-patient').addEventListener('click', openNewPatientModal);
+  document.getElementById('btn-open-quick-appt').addEventListener('click', openQuickApptModal);
   document.getElementById('btn-back-to-dashboard').addEventListener('click', function(){
     showScreen('screen-dashboard');
     renderDashboard();
@@ -1075,7 +1082,7 @@
         '<div class="patient-card" data-id="' + p.id + '">' +
           '<div class="row-top">' +
             '<div>' +
-              '<p class="pet-name">' + escapeHtml(p.name) + '</p>' +
+              '<p class="pet-name">' + escapeHtml(p.name) + (p.pendingCompletion ? ' <span style="font-size:10.5px; font-weight:700; color:var(--accent); background:var(--accent-soft); padding:2px 6px; border-radius:5px; vertical-align:middle;">Pendiente</span>' : '') + '</p>' +
               '<p class="pet-meta">' + escapeHtml(p.breed || 'Raza no especificada') + ' · ' + escapeHtml(p.age || '—') + '</p>' +
             '</div>' +
             '<span class="species-badge ' + p.species + '">' + speciesLabel(p.species) + '</span>' +
@@ -1112,6 +1119,106 @@
     renderStats();
     renderPatientsList();
     renderCalendar();
+  }
+
+  /* ================== MODAL: CITA RÁPIDA (sin expediente) ================== */
+  function openQuickApptModal(){
+    var overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML =
+      '<div class="modal" style="max-width:460px;">' +
+        '<div class="modal-header">' +
+          '<div><h2>Cita rápida</h2><p class="sub">Crea un expediente mínimo y agenda la cita. Podrás completar los datos después.</p></div>' +
+          '<button class="modal-close" id="qa-close" aria-label="Cerrar">' +
+            '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 6l12 12M18 6L6 18"/></svg>' +
+          '</button>' +
+        '</div>' +
+        '<div class="modal-body">' +
+          '<div class="form-section">' +
+            '<div class="form-grid">' +
+              '<div class="field span-2" id="f-qa-pet"><label>Nombre de la mascota</label><input id="qa-pet" placeholder="Firulais"><p class="error">Ingresa el nombre de la mascota.</p></div>' +
+              '<div class="field" id="f-qa-owner"><label>Propietario</label><input id="qa-owner" placeholder="Nombre del propietario"><p class="error">Ingresa el nombre del propietario.</p></div>' +
+              '<div class="field" id="f-qa-phone"><label>Teléfono</label><input id="qa-phone" placeholder="55 1234 5678"><p class="error">Ingresa un teléfono.</p></div>' +
+              '<div class="field"><label>Tipo de cita</label><select id="qa-type"><option value="Estética">Estética</option><option value="Baño">Baño</option><option value="Corte">Corte</option><option value="Consulta médica">Consulta médica</option><option value="Otro">Otro</option></select></div>' +
+              '<div class="field" id="f-qa-date"><label>Fecha</label><input type="date" id="qa-date"><p class="error">Elige una fecha.</p></div>' +
+              '<div class="field span-2"><label>Nota (opcional)</label><input id="qa-note" placeholder="Detalles breves de la cita"></div>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="modal-footer">' +
+          '<button class="btn" id="qa-cancel">Cancelar</button>' +
+          '<button class="btn btn-primary" id="qa-save">Agendar cita</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(overlay);
+
+    function close(){ overlay.remove(); }
+    overlay.addEventListener('click', function(e){ if(e.target === overlay) close(); });
+    overlay.querySelector('#qa-close').addEventListener('click', close);
+    overlay.querySelector('#qa-cancel').addEventListener('click', close);
+
+    overlay.querySelector('#qa-save').addEventListener('click', async function(){
+      var pet = overlay.querySelector('#qa-pet').value.trim();
+      var owner = overlay.querySelector('#qa-owner').value.trim();
+      var phone = overlay.querySelector('#qa-phone').value.trim();
+      var type = overlay.querySelector('#qa-type').value;
+      var date = overlay.querySelector('#qa-date').value;
+      var note = overlay.querySelector('#qa-note').value.trim();
+
+      var ok = true;
+      toggleFieldError(overlay, 'f-qa-pet', !pet); if(!pet) ok = false;
+      toggleFieldError(overlay, 'f-qa-owner', !owner); if(!owner) ok = false;
+      toggleFieldError(overlay, 'f-qa-phone', !phone); if(!phone) ok = false;
+      toggleFieldError(overlay, 'f-qa-date', !date); if(!date) ok = false;
+      if(!ok) return;
+
+      var saveBtn = overlay.querySelector('#qa-save');
+      saveBtn.disabled = true; saveBtn.textContent = 'Agendando…';
+      try{
+        var todayStr = new Date().toISOString().slice(0,10);
+        var patient = {
+          id: uid('pat'),
+          name: pet,
+          species: 'otro',
+          sex: 'macho',
+          age: '',
+          breed: '',
+          sterilized: 'desconocido',
+          ownerName: owner,
+          ownerPhone: phone,
+          clinicId: state.user.clinicId,
+          pendingCompletion: true,
+          createdAt: new Date().toISOString()
+        };
+        await savePatient(patient);
+        state.patients.push(patient);
+
+        var consult = {
+          id: uid('con'),
+          patientId: patient.id,
+          clinicId: state.user.clinicId,
+          date: todayStr,
+          reason: type + (note ? ' — ' + note : ''),
+          exam: {},
+          hallazgos: '',
+          diagPresuntivo: '',
+          diagDefinitivo: '',
+          tratamiento: '',
+          proximaCita: date,
+          doctor: state.user.name
+        };
+        await saveConsultation(consult);
+        state.consultations.push(consult);
+
+        close();
+        showToast('Cita agendada.');
+        renderDashboard();
+      }catch(e){
+        console.error(e);
+        showToast('No se pudo agendar la cita.');
+        saveBtn.disabled = false; saveBtn.textContent = 'Agendar cita';
+      }
+    });
   }
 
   /* ================== MODAL: NUEVO PACIENTE ================== */
