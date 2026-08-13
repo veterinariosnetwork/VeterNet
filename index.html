@@ -553,9 +553,16 @@
   /* ================== PERSISTENCIA (FIRESTORE) ================== */
   async function loadData(){
     try{
-      var patientsSnap = await db.collection('patients').get();
+      var isAdmin = state.user && state.user.role === 'admin';
+      var patientsQuery = db.collection('patients');
+      var consultsQuery = db.collection('consultations');
+      if(!isAdmin){
+        patientsQuery = patientsQuery.where('clinicId', '==', state.user.clinicId);
+        consultsQuery = consultsQuery.where('clinicId', '==', state.user.clinicId);
+      }
+      var patientsSnap = await patientsQuery.get();
       state.patients = patientsSnap.docs.map(function(d){ return d.data(); });
-      var consultsSnap = await db.collection('consultations').get();
+      var consultsSnap = await consultsQuery.get();
       state.consultations = consultsSnap.docs.map(function(d){ return d.data(); });
     }catch(e){
       console.error('Error cargando datos', e);
@@ -587,14 +594,30 @@
   async function ensureUserProfile(user){
     var ref = db.collection('users').doc(user.uid);
     var snap = await ref.get();
-    if(snap.exists) return snap.data();
     var isAdmin = user.email === ADMIN_EMAIL;
+    var clinicId = null;
+    if(!isAdmin){
+      try{
+        var authDoc = await db.collection('authorizedEmails').doc(user.email).get();
+        if(authDoc.exists) clinicId = authDoc.data().clinicId || null;
+      }catch(e){ console.error('Error obteniendo consultorio', e); }
+    }
+    if(snap.exists){
+      var existing = snap.data();
+      // mantener sincronizado el consultorio por si el admin lo cambió
+      if(!isAdmin && existing.clinicId !== clinicId){
+        await ref.update({ clinicId: clinicId });
+        existing.clinicId = clinicId;
+      }
+      return existing;
+    }
     var nameInput = document.getElementById('input-signup-name').value.trim();
     var profile = {
       uid: user.uid,
       email: user.email,
       name: nameInput || user.email,
       role: isAdmin ? 'admin' : 'doctor',
+      clinicId: clinicId,
       createdAt: new Date().toISOString()
     };
     await ref.set(profile);
@@ -626,7 +649,7 @@
         return;
       }
       var profile = await ensureUserProfile(user);
-      state.user = { uid: user.uid, email: user.email, name: profile.name, role: profile.role };
+      state.user = { uid: user.uid, email: user.email, name: profile.name, role: profile.role, clinicId: profile.clinicId || null };
       document.getElementById('topbar-doctor-name').textContent = state.user.name;
       document.getElementById('topbar-doctor-name-2').textContent = state.user.name;
       toggleAdminUI();
@@ -968,6 +991,7 @@
         sterilized: overlay.querySelector('#np-sterilized').value,
         ownerName: ownerName,
         ownerPhone: ownerPhone,
+        clinicId: state.user.clinicId,
         createdAt: new Date().toISOString()
       };
       var saveBtn = overlay.querySelector('#np-save');
@@ -1218,6 +1242,7 @@
       var consult = {
         id: uid('con'),
         patientId: patientId,
+        clinicId: state.user.clinicId,
         date: overlay.querySelector('#nc-date').value || today,
         reason: reason,
         exam: {
@@ -1280,6 +1305,7 @@
             '<div class="form-grid">' +
               '<div class="field" id="f-md-email"><label>Correo</label><input id="md-email" placeholder="doctor@clinica.com"><p class="error">Ingresa un correo válido.</p></div>' +
               '<div class="field"><label>Rol</label><select id="md-role"><option value="doctor">Médico</option><option value="admin">Administrador</option></select></div>' +
+              '<div class="field" id="f-md-clinic"><label>Consultorio</label><input id="md-clinic" placeholder="Ej: Consultorio Centro"><p class="error">Ingresa el nombre del consultorio.</p></div>' +
             '</div>' +
             '<button class="btn btn-accent" id="md-add" style="margin-top:10px;">Agregar acceso</button>' +
           '</div>' +
@@ -1311,9 +1337,11 @@
           return;
         }
         listEl.innerHTML = rows.map(function(r){
+          var roleLabel = r.role === 'admin' ? 'Administrador' : 'Médico';
+          var clinicLabel = r.clinicId ? ' · ' + escapeHtml(r.clinicId) : '';
           return '<div class="kv-item" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">' +
             '<div><div class="v" style="font-family:var(--font-body); font-weight:600; font-size:13.5px;">' + escapeHtml(r.email) + '</div>' +
-            '<div class="k">' + (r.role === 'admin' ? 'Administrador' : 'Médico') + '</div></div>' +
+            '<div class="k">' + roleLabel + clinicLabel + '</div></div>' +
             '<button class="btn btn-danger" data-remove="' + escapeHtml(r.email) + '" style="padding:6px 10px; font-size:12.5px;">Quitar acceso</button>' +
           '</div>';
         }).join('');
@@ -1342,9 +1370,12 @@
     overlay.querySelector('#md-add').addEventListener('click', async function(){
       var email = overlay.querySelector('#md-email').value.trim().toLowerCase();
       var role = overlay.querySelector('#md-role').value;
+      var clinicId = overlay.querySelector('#md-clinic').value.trim();
       var emailBad = !email || email.indexOf('@') === -1;
       toggleFieldError(overlay, 'f-md-email', emailBad);
-      if(emailBad) return;
+      var clinicBad = !clinicId;
+      toggleFieldError(overlay, 'f-md-clinic', clinicBad);
+      if(emailBad || clinicBad) return;
 
       var btn = overlay.querySelector('#md-add');
       btn.disabled = true; btn.textContent = 'Agregando…';
@@ -1352,10 +1383,12 @@
         await db.collection('authorizedEmails').doc(email).set({
           email: email,
           role: role,
+          clinicId: clinicId,
           addedBy: state.user ? state.user.email : null,
           addedAt: new Date().toISOString()
         });
         overlay.querySelector('#md-email').value = '';
+        overlay.querySelector('#md-clinic').value = '';
         showToast('Médico autorizado. Ya puede crear su cuenta.');
         renderDoctorsList();
       }catch(e){
