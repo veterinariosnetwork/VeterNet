@@ -88,18 +88,16 @@
   .login-mascot{ display:flex; justify-content:center; margin-bottom:10px; }
   .login-mascot svg{ width:132px; height:114px; overflow:visible; }
   .mascot-pupil{ transition: transform .12s ease-out; }
-  .mascot-tongue{ transform-origin: 100px 96px; transition: transform .18s ease; }
-  .mascot-tongue.wag{ animation: mascotWag .32s ease; }
-  @keyframes mascotWag{
-    0%{ transform: rotate(0deg); }
-    30%{ transform: rotate(-14deg); }
-    60%{ transform: rotate(10deg); }
-    100%{ transform: rotate(0deg); }
-  }
+  .mascot-mouth-left, .mascot-mouth-right{ transition: transform .18s ease; transform-box: fill-box; }
+  .mascot-mouth-left{ transform-origin: 100% 0%; }
+  .mascot-mouth-right{ transform-origin: 0% 0%; }
+  .mascot-mouth-left.smiling{ transform: scaleX(1.18) translateY(1px); }
+  .mascot-mouth-right.smiling{ transform: scaleX(1.18) translateY(1px); }
   .mascot-paw{ transition: transform .28s cubic-bezier(.4,0,.2,1); transform-box: fill-box; transform-origin: 50% 50%; }
   .login-mascot.covering .mascot-paw-left{ transform: translate(27px, -48px) rotate(-6deg) scale(1.05); }
   .login-mascot.covering .mascot-paw-right{ transform: translate(-27px, -48px) rotate(6deg) scale(1.05); }
-  .login-mascot.covering .mascot-tongue{ opacity:0; }
+  .login-mascot.covering .mascot-mouth-left,
+  .login-mascot.covering .mascot-mouth-right{ opacity:0; }
   .login-eyebrow{
     font-family: var(--font-mono);
     font-size:11px;
@@ -511,10 +509,10 @@
           </g>
 
           <!-- nariz y boca -->
-          <path d="M103 132 L110 139 L117 132 Z" fill="#E8607A"/>
-          <path d="M110 139 L110 145" stroke="#131B2E" stroke-width="2" fill="none" stroke-linecap="round"/>
-          <path class="mascot-tongue" id="mascot-tongue" d="M105 148 Q110 168 115 148 Q110 154 105 148 Z" fill="#E8607A"/>
-          <path d="M92 150 Q110 160 128 150" stroke="#2A2118" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+          <path d="M103 130 Q110 126 117 130 Q117 137 110 140 Q103 137 103 130 Z" fill="#E8607A"/>
+          <path d="M110 140 L110 146" stroke="#2A2118" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <path class="mascot-mouth-left" id="mascot-mouth-left" d="M110 146 Q100 152 90 146" stroke="#2A2118" stroke-width="2.6" fill="none" stroke-linecap="round"/>
+          <path class="mascot-mouth-right" id="mascot-mouth-right" d="M110 146 Q120 152 130 146" stroke="#2A2118" stroke-width="2.6" fill="none" stroke-linecap="round"/>
 
           <!-- bigotes -->
           <g stroke="#C97A46" stroke-width="2" stroke-linecap="round" opacity="0.7">
@@ -933,34 +931,43 @@
     var mascot = document.getElementById('login-mascot');
     var pupilLeft = document.getElementById('pupil-left');
     var pupilRight = document.getElementById('pupil-right');
-    var tongue = document.getElementById('mascot-tongue');
+    var mouthLeft = document.getElementById('mascot-mouth-left');
+    var mouthRight = document.getElementById('mascot-mouth-right');
     var emailInput = document.getElementById('input-email');
     var passwordInput = document.getElementById('input-password');
     if(!mascot || !emailInput || !passwordInput) return;
 
-    var wagTimeout = null;
-    function wagTongue(){
-      tongue.classList.remove('wag');
-      void tongue.offsetWidth; // reiniciar animación
-      tongue.classList.add('wag');
-      clearTimeout(wagTimeout);
-      wagTimeout = setTimeout(function(){ tongue.classList.remove('wag'); }, 320);
+    var smileTimeout = null;
+    function smile(){
+      mouthLeft.classList.add('smiling');
+      mouthRight.classList.add('smiling');
+      clearTimeout(smileTimeout);
+      smileTimeout = setTimeout(function(){
+        mouthLeft.classList.remove('smiling');
+        mouthRight.classList.remove('smiling');
+      }, 260);
     }
 
-    function moveEyes(ratio){
+    function moveEyes(ratio, hasText){
       var offsetX = (ratio - 0.5) * 14; // -7 a 7 px
-      pupilLeft.setAttribute('transform', 'translate(' + offsetX + ',0)');
-      pupilRight.setAttribute('transform', 'translate(' + offsetX + ',0)');
+      var offsetY = hasText ? 4 : 0; // baja la mirada hacia el texto escrito
+      var t = 'translate(' + offsetX + ',' + offsetY + ')';
+      pupilLeft.setAttribute('transform', t);
+      pupilRight.setAttribute('transform', t);
     }
 
     emailInput.addEventListener('input', function(){
       var val = emailInput.value;
       var ratio = Math.max(0, Math.min(1, val.length / 26));
-      moveEyes(ratio);
-      if(val.length) wagTongue();
+      moveEyes(ratio, val.length > 0);
+      if(val.length) smile();
     });
     emailInput.addEventListener('focus', function(){
       mascot.classList.remove('covering');
+      moveEyes(emailInput.value.length / 26, emailInput.value.length > 0);
+    });
+    emailInput.addEventListener('blur', function(){
+      moveEyes(0.5, false);
     });
 
     passwordInput.addEventListener('focus', function(){
