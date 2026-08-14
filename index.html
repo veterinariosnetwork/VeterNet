@@ -240,12 +240,12 @@
   }
   .cal-day.has-vaccine.today{ box-shadow: inset 0 0 0 1.5px var(--sage), inset 0 0 0 3px var(--primary); }
   .cal-day.has-vaccine:hover{ filter:brightness(0.96); }
-  .cal-day-vac-icon{ position:absolute; bottom:2px; right:2px; color: var(--sage); }
+  .cal-day-vac-icon{ position:absolute; bottom:1px; right:1px; font-size:9px; line-height:1; }
   .cal-legend{ font-size:11.5px; color: var(--ink-faint); margin-top:10px; display:flex; flex-direction:column; gap:4px; }
   .cal-legend .legend-row{ display:flex; align-items:center; gap:6px; }
   .cal-legend .dot{ width:8px; height:8px; border-radius:50%; background: var(--accent); display:inline-block; }
   .cal-legend .dot.vaccine{ background: var(--sage); }
-  .cal-vac-icon{ color: var(--sage); flex-shrink:0; margin-top:1px; }
+  .cal-vac-icon{ font-size:12px; flex-shrink:0; margin-top:1px; }
   .cal-upcoming{ margin-top:14px; border-top:1px solid var(--line); padding-top:12px; }
   .cal-upcoming .cal-up-title{ font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color: var(--ink-faint); margin-bottom:8px; }
   .cal-up-item{
@@ -1028,6 +1028,10 @@
     return { canino:'Canino', felino:'Felino', otro:'Otro' }[s] || s;
   }
 
+  function speciesEmoji(s){
+    return { canino:'🐶', felino:'🐱', otro:'🥕' }[s] || '🥕';
+  }
+
   function lastConsultationFor(patientId){
     var list = state.consultations.filter(function(c){ return c.patientId === patientId; });
     if(!list.length) return null;
@@ -1118,7 +1122,7 @@
       if(dateStr === todayStr) classes += ' today';
       if(hasCita) classes += ' has-cita';
       if(hasVaccine) classes += ' has-vaccine';
-      var vacIconSvg = hasVaccine ? '<svg class="cal-day-vac-icon" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M19 5L12 12M14 3l7 7M5 19l3-3M2 22l3-3M8.5 15.5L4 20"/></svg>' : '';
+      var vacIconSvg = hasVaccine ? '<span class="cal-day-vac-icon">💉</span>' : '';
       cellsHtml += '<div class="' + classes + '" data-date="' + dateStr + '">' + day + vacIconSvg + '</div>';
     }
 
@@ -1151,7 +1155,7 @@
         var reason = escapeHtml(u.item.consult.reason || '');
         var hora = u.item.consult.proximaCitaHora ? ' · ' + fmtTime(u.item.consult.proximaCitaHora) : '';
         var isVaccine = u.item.consult.vacuna && u.item.consult.vacuna.nombre;
-        var vacIcon = isVaccine ? '<svg class="cal-vac-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M19 5L12 12M14 3l7 7M5 19l3-3M2 22l3-3M8.5 15.5L4 20"/></svg>' : '';
+        var vacIcon = isVaccine ? '<span class="cal-vac-icon">💉</span>' : '';
         return '<div class="cal-up-item" data-goto="' + u.item.consult.patientId + '" style="display:flex; gap:6px; align-items:flex-start;">' +
           (isVaccine ? '<span style="margin-top:2px;">' + vacIcon + '</span>' : '') +
           '<div style="flex:1;">' +
@@ -1215,7 +1219,7 @@
       var reason = escapeHtml(item.consult.reason || '');
       var hora = item.consult.proximaCitaHora ? '<div class="d">' + fmtTime(item.consult.proximaCitaHora) + '</div>' : '';
       var isVaccine = item.consult.vacuna && item.consult.vacuna.nombre;
-      var vacIcon = isVaccine ? '<svg class="cal-vac-icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M19 5L12 12M14 3l7 7M5 19l3-3M2 22l3-3M8.5 15.5L4 20"/></svg>' : '';
+      var vacIcon = isVaccine ? '<span class="cal-vac-icon">💉</span>' : '';
       return '<div class="cal-up-item" style="margin-bottom:8px; display:flex; align-items:flex-start; justify-content:space-between; gap:10px;">' +
         '<div data-goto="' + item.consult.patientId + '" style="cursor:pointer; flex:1; display:flex; gap:6px; align-items:flex-start;">' +
           (isVaccine ? '<span style="margin-top:2px;">' + vacIcon + '</span>' : '') +
@@ -1332,7 +1336,7 @@
         '<div class="patient-card" data-id="' + p.id + '">' +
           '<div class="row-top">' +
             '<div>' +
-              '<p class="pet-name">' + escapeHtml(p.name) + (p.pendingCompletion ? ' <span style="font-size:10.5px; font-weight:700; color:var(--accent); background:var(--accent-soft); padding:2px 6px; border-radius:5px; vertical-align:middle;">Pendiente</span>' : '') + '</p>' +
+              '<p class="pet-name">' + speciesEmoji(p.species) + ' ' + escapeHtml(p.name) + (p.pendingCompletion ? ' <span style="font-size:10.5px; font-weight:700; color:var(--accent); background:var(--accent-soft); padding:2px 6px; border-radius:5px; vertical-align:middle;">Pendiente</span>' : '') + '</p>' +
               '<p class="pet-meta">' + escapeHtml(p.breed || 'Raza no especificada') + ' · ' + escapeHtml(p.age || '—') + '</p>' +
             '</div>' +
             '<span class="species-badge ' + p.species + '">' + speciesLabel(p.species) + '</span>' +
@@ -1860,7 +1864,7 @@
       '<div class="patient-header">' +
         '<div>' +
           '<span class="species-badge ' + p.species + '" style="margin-bottom:8px; display:inline-block;">' + speciesLabel(p.species) + '</span>' +
-          '<p class="pet-name">' + escapeHtml(p.name) + '</p>' +
+          '<p class="pet-name">' + speciesEmoji(p.species) + ' ' + escapeHtml(p.name) + '</p>' +
           '<div class="facts">' +
             '<span><strong>Sexo:</strong> ' + escapeHtml(p.sex) + '</span>' +
             '<span><strong>Edad:</strong> ' + escapeHtml(p.age || '—') + '</span>' +
