@@ -1524,6 +1524,162 @@
     if(el) el.classList.toggle('has-error', !!hasError);
   }
 
+  /* ================== MODAL: EDITAR PACIENTE ================== */
+  function openEditPatientModal(patient){
+    var overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.innerHTML =
+      '<div class="modal">' +
+        '<div class="modal-header">' +
+          '<div><h2>Editar paciente</h2><p class="sub">Actualiza los datos del paciente y del propietario</p></div>' +
+          '<button class="modal-close" id="ep-close" aria-label="Cerrar">' +
+            '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 6l12 12M18 6L6 18"/></svg>' +
+          '</button>' +
+        '</div>' +
+        '<div class="modal-body">' +
+          '<div class="form-section">' +
+            '<p class="sec-title"><span class="num">1</span>Datos del paciente</p>' +
+            '<div class="form-grid">' +
+              '<div class="field span-2" id="f-ep-name"><label>Nombre de la mascota</label><input id="ep-name" placeholder="Firulais"><p class="error">Ingresa el nombre de la mascota.</p></div>' +
+              '<div class="field" id="f-ep-species"><label>Especie</label>' +
+                '<select id="ep-species"><option value="canino">Canino</option><option value="felino">Felino</option><option value="otro">Otro</option></select>' +
+              '</div>' +
+              '<div class="field" id="f-ep-sex"><label>Sexo</label>' +
+                '<select id="ep-sex"><option value="macho">Macho</option><option value="hembra">Hembra</option></select>' +
+              '</div>' +
+              '<div class="field" id="f-ep-age"><label>Edad</label><input id="ep-age" placeholder="3 años"></div>' +
+              '<div class="field" id="f-ep-breed"><label>Raza</label><input id="ep-breed" placeholder="Mestizo"></div>' +
+              '<div class="field span-2" id="f-ep-sterilized"><label>Esterilizado</label>' +
+                '<select id="ep-sterilized"><option value="si">Sí</option><option value="no">No</option><option value="desconocido">Se desconoce</option></select>' +
+              '</div>' +
+            '</div>' +
+          '</div>' +
+          '<div class="form-section">' +
+            '<p class="sec-title"><span class="num">2</span>Datos del propietario</p>' +
+            '<div class="form-grid">' +
+              '<div class="field" id="f-ep-owner-name"><label>Nombre y apellido</label><input id="ep-owner-name" placeholder="María Pérez"><p class="error">Ingresa el nombre del propietario.</p></div>' +
+              '<div class="field" id="f-ep-owner-phone"><label>Celular</label><input id="ep-owner-phone" placeholder="999 123 4567"><p class="error">Ingresa un número de celular.</p></div>' +
+            '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="modal-footer">' +
+          '<button class="btn" id="ep-cancel">Cancelar</button>' +
+          '<button class="btn btn-primary" id="ep-save">Guardar cambios</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(overlay);
+
+    overlay.querySelector('#ep-name').value = patient.name || '';
+    overlay.querySelector('#ep-species').value = patient.species || 'otro';
+    overlay.querySelector('#ep-sex').value = patient.sex || 'macho';
+    overlay.querySelector('#ep-age').value = patient.age || '';
+    overlay.querySelector('#ep-breed').value = patient.breed || '';
+    overlay.querySelector('#ep-sterilized').value = patient.sterilized || 'desconocido';
+    overlay.querySelector('#ep-owner-name').value = patient.ownerName || '';
+    overlay.querySelector('#ep-owner-phone').value = patient.ownerPhone || '';
+
+    function close(){ overlay.remove(); }
+    overlay.addEventListener('click', function(e){ if(e.target === overlay) close(); });
+    overlay.querySelector('#ep-close').addEventListener('click', close);
+    overlay.querySelector('#ep-cancel').addEventListener('click', close);
+
+    overlay.querySelector('#ep-save').addEventListener('click', async function(){
+      var name = overlay.querySelector('#ep-name').value.trim();
+      var ownerName = overlay.querySelector('#ep-owner-name').value.trim();
+      var ownerPhone = overlay.querySelector('#ep-owner-phone').value.trim();
+
+      var ok = true;
+      toggleFieldError(overlay, 'f-ep-name', !name); if(!name) ok = false;
+      toggleFieldError(overlay, 'f-ep-owner-name', !ownerName); if(!ownerName) ok = false;
+      toggleFieldError(overlay, 'f-ep-owner-phone', !ownerPhone); if(!ownerPhone) ok = false;
+      if(!ok) return;
+
+      var updated = Object.assign({}, patient, {
+        name: name,
+        species: overlay.querySelector('#ep-species').value,
+        sex: overlay.querySelector('#ep-sex').value,
+        age: overlay.querySelector('#ep-age').value.trim(),
+        breed: overlay.querySelector('#ep-breed').value.trim(),
+        sterilized: overlay.querySelector('#ep-sterilized').value,
+        ownerName: ownerName,
+        ownerPhone: ownerPhone
+      });
+      delete updated.pendingCompletion;
+
+      var saveBtn = overlay.querySelector('#ep-save');
+      saveBtn.disabled = true; saveBtn.textContent = 'Guardando…';
+      try{
+        await savePatient(updated);
+        var idx = state.patients.findIndex(function(x){ return x.id === patient.id; });
+        if(idx > -1) state.patients[idx] = updated;
+        close();
+        showToast('Paciente actualizado.');
+        renderPatientDetail();
+      }catch(e){
+        console.error(e);
+        showToast('No se pudieron guardar los cambios.');
+        saveBtn.disabled = false; saveBtn.textContent = 'Guardar cambios';
+      }
+    });
+  }
+
+  /* ================== ELIMINAR PACIENTE ================== */
+  function confirmDeletePatient(patient){
+    var overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    var consultCount = state.consultations.filter(function(c){ return c.patientId === patient.id; }).length;
+    overlay.innerHTML =
+      '<div class="modal" style="max-width:420px;">' +
+        '<div class="modal-header">' +
+          '<div><h2>Eliminar expediente</h2><p class="sub">Esta acción no se puede deshacer.</p></div>' +
+          '<button class="modal-close" id="dp-close" aria-label="Cerrar">' +
+            '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 6l12 12M18 6L6 18"/></svg>' +
+          '</button>' +
+        '</div>' +
+        '<div class="modal-body">' +
+          '<p>¿Seguro que quieres eliminar el expediente de <strong>' + escapeHtml(patient.name) + '</strong>' +
+            (consultCount ? ' y sus ' + consultCount + (consultCount === 1 ? ' consulta registrada' : ' consultas registradas') : '') +
+          '?</p>' +
+        '</div>' +
+        '<div class="modal-footer">' +
+          '<button class="btn" id="dp-cancel">Cancelar</button>' +
+          '<button class="btn btn-danger" id="dp-confirm">Eliminar definitivamente</button>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(overlay);
+
+    function close(){ overlay.remove(); }
+    overlay.addEventListener('click', function(e){ if(e.target === overlay) close(); });
+    overlay.querySelector('#dp-close').addEventListener('click', close);
+    overlay.querySelector('#dp-cancel').addEventListener('click', close);
+
+    overlay.querySelector('#dp-confirm').addEventListener('click', async function(){
+      var btn = overlay.querySelector('#dp-confirm');
+      btn.disabled = true; btn.textContent = 'Eliminando…';
+      try{
+        var relatedConsults = state.consultations.filter(function(c){ return c.patientId === patient.id; });
+        var batch = db.batch();
+        batch.delete(db.collection('patients').doc(patient.id));
+        relatedConsults.forEach(function(c){
+          batch.delete(db.collection('consultations').doc(c.id));
+        });
+        await batch.commit();
+
+        state.patients = state.patients.filter(function(p){ return p.id !== patient.id; });
+        state.consultations = state.consultations.filter(function(c){ return c.patientId !== patient.id; });
+
+        close();
+        showToast('Expediente eliminado.');
+        showScreen('screen-dashboard');
+        renderDashboard();
+      }catch(e){
+        console.error(e);
+        showToast('No se pudo eliminar el expediente.');
+        btn.disabled = false; btn.textContent = 'Eliminar definitivamente';
+      }
+    });
+  }
+
   /* ================== DETALLE DE PACIENTE ================== */
   function openPatientDetail(patientId){
     state.currentPatientId = patientId;
@@ -1557,6 +1713,16 @@
           '<p class="eyebrow">Propietario</p>' +
           '<p class="owner-name">' + escapeHtml(p.ownerName) + '</p>' +
           '<p class="owner-phone"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M22 16.9v3a2 2 0 01-2.2 2 19.8 19.8 0 01-8.6-3.1 19.5 19.5 0 01-6-6 19.8 19.8 0 01-3.1-8.7A2 2 0 014.1 2h3a2 2 0 012 1.7c.1.9.3 1.8.6 2.7a2 2 0 01-.5 2.1L8 9.7a16 16 0 006 6l1.2-1.2a2 2 0 012.1-.5c.9.3 1.8.5 2.7.6a2 2 0 011.7 2z"/></svg>' + escapeHtml(p.ownerPhone) + '</p>' +
+          '<div style="display:flex; gap:8px; margin-top:12px;">' +
+            '<button class="btn btn-ghost" id="btn-edit-patient" style="padding:7px 12px; font-size:12.5px;">' +
+              '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>' +
+              'Editar' +
+            '</button>' +
+            '<button class="btn btn-danger" id="btn-delete-patient" style="padding:7px 12px; font-size:12.5px;">' +
+              '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0-1 14a2 2 0 01-2 2H7a2 2 0 01-2-2L4 6"/></svg>' +
+              'Eliminar' +
+            '</button>' +
+          '</div>' +
         '</div>' +
       '</div>' +
       '<div class="section-heading">' +
@@ -1582,6 +1748,12 @@
 
     document.getElementById('btn-new-consult').addEventListener('click', function(){
       openNewConsultModal(p.id);
+    });
+    document.getElementById('btn-edit-patient').addEventListener('click', function(){
+      openEditPatientModal(p);
+    });
+    document.getElementById('btn-delete-patient').addEventListener('click', function(){
+      confirmDeletePatient(p);
     });
 
     Array.prototype.forEach.call(container.querySelectorAll('.consult-card'), function(card){
