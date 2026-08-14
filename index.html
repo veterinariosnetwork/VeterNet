@@ -240,6 +240,7 @@
   }
   .cal-day.has-vaccine.today{ box-shadow: inset 0 0 0 1.5px var(--sage), inset 0 0 0 3px var(--primary); }
   .cal-day.has-vaccine:hover{ filter:brightness(0.96); }
+  .cal-day-vac-icon{ position:absolute; bottom:2px; right:2px; color: var(--sage); }
   .cal-legend{ font-size:11.5px; color: var(--ink-faint); margin-top:10px; display:flex; flex-direction:column; gap:4px; }
   .cal-legend .legend-row{ display:flex; align-items:center; gap:6px; }
   .cal-legend .dot{ width:8px; height:8px; border-radius:50%; background: var(--accent); display:inline-block; }
@@ -1117,7 +1118,8 @@
       if(dateStr === todayStr) classes += ' today';
       if(hasCita) classes += ' has-cita';
       if(hasVaccine) classes += ' has-vaccine';
-      cellsHtml += '<div class="' + classes + '" data-date="' + dateStr + '">' + day + '</div>';
+      var vacIconSvg = hasVaccine ? '<svg class="cal-day-vac-icon" width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round"><path d="M19 5L12 12M14 3l7 7M5 19l3-3M2 22l3-3M8.5 15.5L4 20"/></svg>' : '';
+      cellsHtml += '<div class="' + classes + '" data-date="' + dateStr + '">' + day + vacIconSvg + '</div>';
     }
 
     var dowHtml = DOW_LABELS.map(function(d){ return '<div class="cal-dow">' + d + '</div>'; }).join('');
@@ -1393,7 +1395,7 @@
       var diffDays = Math.round((dueDate - today) / 86400000);
       if(diffDays < 0 || diffDays > 7) return;
 
-      var storageKey = 'vacNotif_' + c.id + '_' + todayStr;
+      var storageKey = 'vacNotif2_' + c.id + '_' + todayStr;
       if(localStorage.getItem(storageKey)) return;
 
       var patient = state.patients.find(function(p){ return p.id === c.patientId; });
@@ -1402,16 +1404,43 @@
         ? ('Hoy toca la vacuna ' + c.vacuna.nombre + ' de ' + pname)
         : ('Faltan ' + diffDays + ' día' + (diffDays === 1 ? '' : 's') + ' para la vacuna ' + c.vacuna.nombre + ' de ' + pname);
 
-      try{
-        var notif = new Notification('VeterNet — Recordatorio de vacuna', { body: msg, icon: 'icon-192.png' });
-        notif.onclick = function(){
-          window.focus();
-          if(patient) openPatientDetail(patient.id);
-        };
-      }catch(e){ console.error('No se pudo mostrar la notificación', e); }
-
+      showLocalNotification('VeterNet — Recordatorio de vacuna', msg, patient ? patient.id : null);
       localStorage.setItem(storageKey, '1');
     });
+  }
+
+  function showLocalNotification(title, body, patientId){
+    var options = {
+      body: body,
+      icon: 'icon-192.png',
+      badge: 'icon-192.png',
+      data: { patientId: patientId }
+    };
+    if('serviceWorker' in navigator && navigator.serviceWorker.controller){
+      navigator.serviceWorker.ready.then(function(reg){
+        reg.showNotification(title, options).catch(function(e){
+          console.error('No se pudo mostrar la notificación vía SW', e);
+          tryPlainNotification(title, options);
+        });
+      }).catch(function(e){
+        console.error('SW no listo', e);
+        tryPlainNotification(title, options);
+      });
+    } else {
+      tryPlainNotification(title, options);
+    }
+  }
+
+  function tryPlainNotification(title, options){
+    try{
+      var notif = new Notification(title, options);
+      notif.onclick = function(){
+        window.focus();
+        if(options.data && options.data.patientId) openPatientDetail(options.data.patientId);
+      };
+    }catch(e){
+      console.error('No se pudo mostrar la notificación', e);
+    }
   }
 
   /* ================== MODAL: CITA RÁPIDA (sin expediente) ================== */
