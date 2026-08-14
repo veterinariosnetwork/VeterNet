@@ -828,6 +828,7 @@
         await loadData();
       }
       renderDashboard();
+      checkVaccineNotifications();
     }catch(e){
       console.error(e);
       showToast('Ocurrió un error al iniciar sesión.');
@@ -1341,6 +1342,51 @@
     renderStats();
     renderPatientsList();
     renderCalendar();
+  }
+
+  /* ================== NOTIFICACIONES LOCALES: VACUNAS PRÓXIMAS ================== */
+  function checkVaccineNotifications(){
+    if(!('Notification' in window)) return;
+    if(Notification.permission === 'granted'){
+      runVaccineNotificationCheck();
+    } else if(Notification.permission === 'default'){
+      Notification.requestPermission().then(function(perm){
+        if(perm === 'granted') runVaccineNotificationCheck();
+      });
+    }
+  }
+
+  function runVaccineNotificationCheck(){
+    var today = new Date(); today.setHours(0,0,0,0);
+    var todayStr = today.toISOString().slice(0,10);
+
+    state.consultations.forEach(function(c){
+      if(!c.vacuna || !c.vacuna.proximaDosis || !c.vacuna.nombre) return;
+
+      var dueDate = new Date(c.vacuna.proximaDosis + 'T00:00:00');
+      if(isNaN(dueDate)) return;
+      var diffDays = Math.round((dueDate - today) / 86400000);
+      if(diffDays < 0 || diffDays > 7) return;
+
+      var storageKey = 'vacNotif_' + c.id + '_' + todayStr;
+      if(localStorage.getItem(storageKey)) return;
+
+      var patient = state.patients.find(function(p){ return p.id === c.patientId; });
+      var pname = patient ? patient.name : 'tu mascota';
+      var msg = diffDays === 0
+        ? ('Hoy toca la vacuna ' + c.vacuna.nombre + ' de ' + pname)
+        : ('Faltan ' + diffDays + ' día' + (diffDays === 1 ? '' : 's') + ' para la vacuna ' + c.vacuna.nombre + ' de ' + pname);
+
+      try{
+        var notif = new Notification('VeterNet — Recordatorio de vacuna', { body: msg, icon: 'icon-192.png' });
+        notif.onclick = function(){
+          window.focus();
+          if(patient) openPatientDetail(patient.id);
+        };
+      }catch(e){ console.error('No se pudo mostrar la notificación', e); }
+
+      localStorage.setItem(storageKey, '1');
+    });
   }
 
   /* ================== MODAL: CITA RÁPIDA (sin expediente) ================== */
@@ -2017,6 +2063,7 @@
               '<div class="field span-2"><label>Vacuna aplicada</label><input id="nc-vac-nombre" placeholder="Ej: Polivalente (DHPPi), Antirrábica, Triple felina…"></div>' +
               '<div class="field"><label>Lote (opcional)</label><input id="nc-vac-lote" placeholder="Lote"></div>' +
               '<div class="field"><label>Próxima dosis (opcional)</label><input type="date" id="nc-vac-proxima"></div>' +
+              '<p class="hint" style="grid-column: 1 / -1; font-size:11.5px; color:var(--ink-faint); margin:0;">Esta fecha también se agenda automáticamente en el calendario como próxima cita, salvo que especifiques otra abajo.</p>' +
             '</div>' +
           '</div>' +
 
@@ -2078,7 +2125,7 @@
           lote: overlay.querySelector('#nc-vac-lote').value.trim(),
           proximaDosis: overlay.querySelector('#nc-vac-proxima').value || null
         },
-        proximaCita: overlay.querySelector('#nc-next-date').value || null,
+        proximaCita: overlay.querySelector('#nc-next-date').value || overlay.querySelector('#nc-vac-proxima').value || null,
         proximaCitaHora: overlay.querySelector('#nc-next-time').value || null,
         doctor: state.user ? state.user.name : ''
       };
