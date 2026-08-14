@@ -1161,20 +1161,23 @@
       var pname = item.patient ? escapeHtml(item.patient.name) : 'Paciente';
       var owner = item.patient ? escapeHtml(item.patient.ownerName || '') : '';
       var reason = escapeHtml(item.consult.reason || '');
-      return '<div class="cal-up-item" data-goto="' + item.consult.patientId + '" style="margin-bottom:8px;">' +
-        '<div class="p">' + pname + (owner ? ' <span style="font-weight:400;color:var(--ink-faint);">· ' + owner + '</span>' : '') + '</div>' +
-        '<div class="r">' + reason + '</div>' +
+      return '<div class="cal-up-item" style="margin-bottom:8px; display:flex; align-items:flex-start; justify-content:space-between; gap:10px;">' +
+        '<div data-goto="' + item.consult.patientId + '" style="cursor:pointer; flex:1;">' +
+          '<div class="p">' + pname + (owner ? ' <span style="font-weight:400;color:var(--ink-faint);">· ' + owner + '</span>' : '') + '</div>' +
+          '<div class="r">' + reason + '</div>' +
+        '</div>' +
+        '<button class="btn btn-danger" data-cancel-consult="' + item.consult.id + '" style="padding:5px 9px; font-size:11.5px; white-space:nowrap;">Cancelar</button>' +
       '</div>';
     }).join('');
     overlay.innerHTML =
       '<div class="modal" style="max-width:420px;">' +
         '<div class="modal-header">' +
-          '<div><h2>Citas del ' + fmtDate(dateStr) + '</h2><p class="sub">' + items.length + ' ' + (items.length === 1 ? 'cita programada' : 'citas programadas') + '</p></div>' +
+          '<div><h2>Citas del ' + fmtDate(dateStr) + '</h2><p class="sub" id="dc-count">' + items.length + ' ' + (items.length === 1 ? 'cita programada' : 'citas programadas') + '</p></div>' +
           '<button class="modal-close" id="dc-close" aria-label="Cerrar">' +
             '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 6l12 12M18 6L6 18"/></svg>' +
           '</button>' +
         '</div>' +
-        '<div class="modal-body">' + itemsHtml + '</div>' +
+        '<div class="modal-body" id="dc-body">' + itemsHtml + '</div>' +
         '<div class="modal-footer">' +
           '<button class="btn" id="dc-cancel">Cerrar</button>' +
         '</div>' +
@@ -1185,6 +1188,28 @@
     overlay.addEventListener('click', function(e){ if(e.target === overlay) close(); });
     overlay.querySelector('#dc-close').addEventListener('click', close);
     overlay.querySelector('#dc-cancel').addEventListener('click', close);
+    Array.prototype.forEach.call(overlay.querySelectorAll('[data-cancel-consult]'), function(btn){
+      btn.addEventListener('click', async function(e){
+        e.stopPropagation();
+        var consultId = btn.getAttribute('data-cancel-consult');
+        btn.disabled = true; btn.textContent = '…';
+        try{
+          await db.collection('consultations').doc(consultId).update({ proximaCita: '' });
+          var idx = state.consultations.findIndex(function(c){ return c.id === consultId; });
+          if(idx > -1) state.consultations[idx].proximaCita = '';
+          btn.closest('.cal-up-item').remove();
+          showToast('Cita cancelada.');
+          renderCalendar();
+          var remaining = overlay.querySelectorAll('.cal-up-item').length;
+          overlay.querySelector('#dc-count').textContent = remaining + (remaining === 1 ? ' cita programada' : ' citas programadas');
+          if(!remaining) close();
+        }catch(err){
+          console.error(err);
+          showToast('No se pudo cancelar la cita.');
+          btn.disabled = false; btn.textContent = 'Cancelar';
+        }
+      });
+    });
     Array.prototype.forEach.call(overlay.querySelectorAll('[data-goto]'), function(node){
       node.addEventListener('click', function(){
         close();
@@ -1761,6 +1786,25 @@
         card.classList.toggle('open');
       });
     });
+
+    Array.prototype.forEach.call(container.querySelectorAll('[data-cancel-next-cita]'), function(btn){
+      btn.addEventListener('click', async function(e){
+        e.stopPropagation();
+        var consultId = btn.getAttribute('data-cancel-next-cita');
+        btn.disabled = true; btn.textContent = '…';
+        try{
+          await db.collection('consultations').doc(consultId).update({ proximaCita: '' });
+          var idx = state.consultations.findIndex(function(c){ return c.id === consultId; });
+          if(idx > -1) state.consultations[idx].proximaCita = '';
+          showToast('Cita cancelada.');
+          renderPatientDetail();
+        }catch(err){
+          console.error(err);
+          showToast('No se pudo cancelar la cita.');
+          btn.disabled = false; btn.textContent = 'Cancelar';
+        }
+      });
+    });
   }
 
   function ganglioLabel(v){
@@ -1809,6 +1853,7 @@
             '<span class="next-visit-tag" style="margin-top:12px;">' +
               '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>' +
               'Próxima cita ' + fmtDate(c.proximaCita) +
+              '<button class="btn btn-danger" data-cancel-next-cita="' + c.id + '" style="margin-left:8px; padding:2px 8px; font-size:10.5px;">Cancelar</button>' +
             '</span>' : '') +
         '</div>' +
       '</div>'
