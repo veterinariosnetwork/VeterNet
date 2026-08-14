@@ -1032,6 +1032,17 @@
     return dt.toLocaleDateString('es-MX', { day:'2-digit', month:'short', year:'numeric' });
   }
 
+  function fmtTime(t){
+    if(!t) return '';
+    var parts = t.split(':');
+    if(parts.length < 2) return t;
+    var h = parseInt(parts[0], 10);
+    var m = parts[1];
+    var suffix = h >= 12 ? 'p.m.' : 'a.m.';
+    var h12 = h % 12; if(h12 === 0) h12 = 12;
+    return h12 + ':' + m + ' ' + suffix;
+  }
+
   function renderStats(){
     var total = state.patients.length;
     var totalConsults = state.consultations.length;
@@ -1101,7 +1112,13 @@
         });
       }
     });
-    upcomingList.sort(function(a,b){ return a.date.localeCompare(b.date); });
+    upcomingList.sort(function(a,b){
+      var dc = a.date.localeCompare(b.date);
+      if(dc !== 0) return dc;
+      var ha = a.item.consult.proximaCitaHora || '99:99';
+      var hb = b.item.consult.proximaCitaHora || '99:99';
+      return ha.localeCompare(hb);
+    });
     upcomingList = upcomingList.slice(0, 6);
 
     var upcomingHtml;
@@ -1111,8 +1128,9 @@
       upcomingHtml = upcomingList.map(function(u){
         var pname = u.item.patient ? escapeHtml(u.item.patient.name) : 'Paciente';
         var reason = escapeHtml(u.item.consult.reason || '');
+        var hora = u.item.consult.proximaCitaHora ? ' · ' + fmtTime(u.item.consult.proximaCitaHora) : '';
         return '<div class="cal-up-item" data-goto="' + u.item.consult.patientId + '">' +
-          '<div class="d">' + fmtDate(u.date) + '</div>' +
+          '<div class="d">' + fmtDate(u.date) + hora + '</div>' +
           '<div class="p">' + pname + '</div>' +
           '<div class="r">' + reason + '</div>' +
         '</div>';
@@ -1144,7 +1162,12 @@
     });
     Array.prototype.forEach.call(el.querySelectorAll('.cal-day.has-cita'), function(node){
       node.addEventListener('click', function(){
-        openDayCitasModal(node.getAttribute('data-date'), citasMap[node.getAttribute('data-date')]);
+        var dayItems = citasMap[node.getAttribute('data-date')].slice().sort(function(a,b){
+          var ha = a.consult.proximaCitaHora || '99:99';
+          var hb = b.consult.proximaCitaHora || '99:99';
+          return ha.localeCompare(hb);
+        });
+        openDayCitasModal(node.getAttribute('data-date'), dayItems);
       });
     });
     Array.prototype.forEach.call(el.querySelectorAll('[data-goto]'), function(node){
@@ -1161,8 +1184,10 @@
       var pname = item.patient ? escapeHtml(item.patient.name) : 'Paciente';
       var owner = item.patient ? escapeHtml(item.patient.ownerName || '') : '';
       var reason = escapeHtml(item.consult.reason || '');
+      var hora = item.consult.proximaCitaHora ? '<div class="d">' + fmtTime(item.consult.proximaCitaHora) + '</div>' : '';
       return '<div class="cal-up-item" style="margin-bottom:8px; display:flex; align-items:flex-start; justify-content:space-between; gap:10px;">' +
         '<div data-goto="' + item.consult.patientId + '" style="cursor:pointer; flex:1;">' +
+          hora +
           '<div class="p">' + pname + (owner ? ' <span style="font-weight:400;color:var(--ink-faint);">· ' + owner + '</span>' : '') + '</div>' +
           '<div class="r">' + reason + '</div>' +
         '</div>' +
@@ -1349,6 +1374,7 @@
             '<div class="form-grid">' +
               '<div class="field"><label>Tipo de cita</label><select id="qa-type"><option value="Estética">Estética</option><option value="Baño">Baño</option><option value="Corte">Corte</option><option value="Consulta médica">Consulta médica</option><option value="Otro">Otro</option></select></div>' +
               '<div class="field" id="f-qa-date"><label>Fecha</label><input type="date" id="qa-date"><p class="error">Elige una fecha.</p></div>' +
+              '<div class="field"><label>Hora (opcional)</label><input type="time" id="qa-time"></div>' +
               '<div class="field span-2"><label>Nota (opcional)</label><input id="qa-note" placeholder="Detalles breves de la cita"></div>' +
             '</div>' +
           '</div>' +
@@ -1379,6 +1405,7 @@
     overlay.querySelector('#qa-save').addEventListener('click', async function(){
       var type = overlay.querySelector('#qa-type').value;
       var date = overlay.querySelector('#qa-date').value;
+      var time = overlay.querySelector('#qa-time').value;
       var note = overlay.querySelector('#qa-note').value.trim();
       var ok = true;
       toggleFieldError(overlay, 'f-qa-date', !date); if(!date) ok = false;
@@ -1437,6 +1464,7 @@
           diagDefinitivo: '',
           tratamiento: '',
           proximaCita: date,
+          proximaCitaHora: time || null,
           doctor: state.user.name
         };
         await saveConsultation(consult);
@@ -1852,7 +1880,7 @@
           (c.proximaCita ?
             '<span class="next-visit-tag" style="margin-top:12px;">' +
               '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>' +
-              'Próxima cita ' + fmtDate(c.proximaCita) +
+              'Próxima cita ' + fmtDate(c.proximaCita) + (c.proximaCitaHora ? ' · ' + fmtTime(c.proximaCitaHora) : '') +
               '<button class="btn btn-danger" data-cancel-next-cita="' + c.id + '" style="margin-left:8px; padding:2px 8px; font-size:10.5px;">Cancelar</button>' +
             '</span>' : '') +
         '</div>' +
@@ -1941,7 +1969,8 @@
           '<div class="form-section">' +
             '<p class="sec-title"><span class="num">7</span>Próxima cita</p>' +
             '<div class="form-grid">' +
-              '<div class="field span-2"><label>Fecha sugerida (opcional)</label><input type="date" id="nc-next-date"></div>' +
+              '<div class="field"><label>Fecha sugerida (opcional)</label><input type="date" id="nc-next-date"></div>' +
+              '<div class="field"><label>Hora (opcional)</label><input type="time" id="nc-next-time"></div>' +
             '</div>' +
           '</div>' +
 
@@ -1990,6 +2019,7 @@
         diagDefinitivo: overlay.querySelector('#nc-diag-definitivo').value.trim(),
         tratamiento: overlay.querySelector('#nc-tratamiento').value.trim(),
         proximaCita: overlay.querySelector('#nc-next-date').value || null,
+        proximaCitaHora: overlay.querySelector('#nc-next-time').value || null,
         doctor: state.user ? state.user.name : ''
       };
 
