@@ -1144,6 +1144,7 @@
       var hasCita = !!dayItems;
       var hasVaccine = hasCita && dayItems.some(function(item){ return item.consult.vacuna && item.consult.vacuna.nombre; });
       var hasDeworm = hasCita && dayItems.some(function(item){ return item.consult.desparasitacion && item.consult.desparasitacion.nombre; });
+      var hasAesthetic = hasCita && dayItems.some(function(item){ return item.consult.type === 'Estética'; });
       var hasMedical = hasCita && dayItems.some(function(item){ return ['Estética','Vacunación','Desparasitación'].indexOf(item.consult.type) === -1; });
       var classes = 'cal-day';
       if(dateStr === todayStr) classes += ' today';
@@ -1152,8 +1153,9 @@
       if(hasDeworm) classes += ' has-deworm';
       var vacIconSvg = hasVaccine ? '<span class="cal-day-vac-icon">💉</span>' : '';
       var dewormIconSvg = hasDeworm ? '<span class="cal-day-deworm-icon">🪱</span>' : '';
+      var aestheticIconSvg = hasAesthetic ? '<span class="cal-day-medical-icon">🧼</span>' : '';
       var medicalIconSvg = hasMedical ? '<span class="cal-day-medical-icon">🩺</span>' : '';
-      cellsHtml += '<div class="' + classes + '" data-date="' + dateStr + '">' + day + vacIconSvg + dewormIconSvg + medicalIconSvg + '</div>';
+      cellsHtml += '<div class="' + classes + '" data-date="' + dateStr + '">' + day + vacIconSvg + dewormIconSvg + aestheticIconSvg + medicalIconSvg + '</div>';
     }
 
     var dowHtml = DOW_LABELS.map(function(d){ return '<div class="cal-dow">' + d + '</div>'; }).join('');
