@@ -240,11 +240,20 @@
   }
   .cal-day.has-vaccine.today{ box-shadow: inset 0 0 0 1.5px var(--sage), inset 0 0 0 3px var(--primary); }
   .cal-day.has-vaccine:hover{ filter:brightness(0.96); }
+  .cal-day.has-deworm{
+    background: rgba(29,78,216,0.14); color: var(--primary); font-weight:700;
+    box-shadow: inset 0 0 0 1.5px var(--primary);
+  }
+  .cal-day.has-deworm.today{ box-shadow: inset 0 0 0 1.5px var(--primary), inset 0 0 0 3px var(--sage); }
+  .cal-day.has-deworm:hover{ filter:brightness(0.96); }
+  .cal-day.has-vaccine.has-deworm{ background: linear-gradient(135deg, rgba(110,142,119,0.16) 50%, rgba(29,78,216,0.14) 50%); }
   .cal-day-vac-icon{ position:absolute; bottom:1px; right:1px; font-size:9px; line-height:1; }
+  .cal-day-deworm-icon{ position:absolute; bottom:1px; left:1px; font-size:9px; line-height:1; }
   .cal-legend{ font-size:11.5px; color: var(--ink-faint); margin-top:10px; display:flex; flex-direction:column; gap:4px; }
   .cal-legend .legend-row{ display:flex; align-items:center; gap:6px; }
   .cal-legend .dot{ width:8px; height:8px; border-radius:50%; background: var(--accent); display:inline-block; }
   .cal-legend .dot.vaccine{ background: var(--sage); }
+  .cal-legend .dot.deworm{ background: var(--primary); }
   .cal-vac-icon{ font-size:12px; flex-shrink:0; margin-top:1px; }
   .cal-upcoming{ margin-top:14px; border-top:1px solid var(--line); padding-top:12px; }
   .cal-upcoming .cal-up-title{ font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color: var(--ink-faint); margin-bottom:8px; }
@@ -1127,12 +1136,15 @@
       var dayItems = citasMap[dateStr];
       var hasCita = !!dayItems;
       var hasVaccine = hasCita && dayItems.some(function(item){ return item.consult.vacuna && item.consult.vacuna.nombre; });
+      var hasDeworm = hasCita && dayItems.some(function(item){ return item.consult.desparasitacion && item.consult.desparasitacion.nombre; });
       var classes = 'cal-day';
       if(dateStr === todayStr) classes += ' today';
       if(hasCita) classes += ' has-cita';
       if(hasVaccine) classes += ' has-vaccine';
+      if(hasDeworm) classes += ' has-deworm';
       var vacIconSvg = hasVaccine ? '<span class="cal-day-vac-icon">💉</span>' : '';
-      cellsHtml += '<div class="' + classes + '" data-date="' + dateStr + '">' + day + vacIconSvg + '</div>';
+      var dewormIconSvg = hasDeworm ? '<span class="cal-day-deworm-icon">🪱</span>' : '';
+      cellsHtml += '<div class="' + classes + '" data-date="' + dateStr + '">' + day + vacIconSvg + dewormIconSvg + '</div>';
     }
 
     var dowHtml = DOW_LABELS.map(function(d){ return '<div class="cal-dow">' + d + '</div>'; }).join('');
@@ -1164,9 +1176,12 @@
         var reason = escapeHtml(u.item.consult.reason || '');
         var hora = u.item.consult.proximaCitaHora ? ' · ' + fmtTime(u.item.consult.proximaCitaHora) : '';
         var isVaccine = u.item.consult.vacuna && u.item.consult.vacuna.nombre;
+        var isDeworm = u.item.consult.desparasitacion && u.item.consult.desparasitacion.nombre;
         var vacIcon = isVaccine ? '<span class="cal-vac-icon">💉</span>' : '';
+        var dewormIcon = isDeworm ? '<span class="cal-vac-icon">🪱</span>' : '';
         return '<div class="cal-up-item" data-goto="' + u.item.consult.patientId + '" style="display:flex; gap:6px; align-items:flex-start;">' +
           (isVaccine ? '<span style="margin-top:2px;">' + vacIcon + '</span>' : '') +
+          (isDeworm ? '<span style="margin-top:2px;">' + dewormIcon + '</span>' : '') +
           '<div style="flex:1;">' +
             '<div class="d">' + fmtDate(u.date) + hora + '</div>' +
             '<div class="p">' + pname + '</div>' +
@@ -1188,6 +1203,7 @@
       '<div class="cal-legend">' +
         '<div class="legend-row"><span class="dot"></span> Día con cita programada</div>' +
         '<div class="legend-row"><span class="dot vaccine"></span> Incluye vacunación</div>' +
+        '<div class="legend-row"><span class="dot deworm"></span> Incluye desparasitación</div>' +
       '</div>' +
       '<div class="cal-upcoming">' +
         '<div class="cal-up-title">Próximas citas</div>' +
@@ -1228,10 +1244,13 @@
       var reason = escapeHtml(item.consult.reason || '');
       var hora = item.consult.proximaCitaHora ? '<div class="d">' + fmtTime(item.consult.proximaCitaHora) + '</div>' : '';
       var isVaccine = item.consult.vacuna && item.consult.vacuna.nombre;
+      var isDeworm = item.consult.desparasitacion && item.consult.desparasitacion.nombre;
       var vacIcon = isVaccine ? '<span class="cal-vac-icon">💉</span>' : '';
+      var dewormIcon = isDeworm ? '<span class="cal-vac-icon">🪱</span>' : '';
       return '<div class="cal-up-item" style="margin-bottom:8px; display:flex; align-items:flex-start; justify-content:space-between; gap:10px;">' +
         '<div data-goto="' + item.consult.patientId + '" style="cursor:pointer; flex:1; display:flex; gap:6px; align-items:flex-start;">' +
           (isVaccine ? '<span style="margin-top:2px;">' + vacIcon + '</span>' : '') +
+          (isDeworm ? '<span style="margin-top:2px;">' + dewormIcon + '</span>' : '') +
           '<div style="flex:1;">' +
             hora +
             '<div class="p">' + pname + (owner ? ' <span style="font-weight:400;color:var(--ink-faint);">· ' + owner + '</span>' : '') + '</div>' +
@@ -1912,6 +1931,20 @@
         '</div>';
     }
 
+    var dewormings = consults.filter(function(c){ return c.desparasitacion && c.desparasitacion.nombre; });
+    if(dewormings.length){
+      html += '<div class="section-heading" style="margin-top:0;"><h3>Historial de desparasitaciones</h3></div>' +
+        '<div class="owner-box" style="margin-bottom:22px;">' +
+        dewormings.map(function(v){
+          return '<div class="kv-item" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">' +
+            '<div><div class="v" style="font-family:var(--font-body); font-weight:600; font-size:13.5px;">' + escapeHtml(v.desparasitacion.nombre) + '</div>' +
+            '<div class="k">Aplicada el ' + fmtDate(v.date) + '</div></div>' +
+            (v.desparasitacion.proximaDosis ? '<span class="next-visit-tag">Próx. ' + fmtDate(v.desparasitacion.proximaDosis) + '</span>' : '') +
+          '</div>';
+        }).join('') +
+        '</div>';
+    }
+
     html += '<div class="section-heading">' +
         '<h3>Historial de consultas</h3>' +
         '<button class="btn btn-accent" id="btn-new-consult">' +
@@ -2034,6 +2067,11 @@
               (c.vacuna.lote ? ' · Lote ' + escapeHtml(c.vacuna.lote) : '') +
               (c.vacuna.proximaDosis ? ' · Próxima dosis: ' + fmtDate(c.vacuna.proximaDosis) : '') +
             '</p>' : '') +
+          (c.desparasitacion && c.desparasitacion.nombre ?
+            '<p class="block-label">Desparasitación</p>' +
+            '<p class="block-text">' + escapeHtml(c.desparasitacion.nombre) +
+              (c.desparasitacion.proximaDosis ? ' · Próxima dosis: ' + fmtDate(c.desparasitacion.proximaDosis) : '') +
+            '</p>' : '') +
           (c.proximaCita ?
             '<span class="next-visit-tag" style="margin-top:12px;">' +
               '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>' +
@@ -2135,7 +2173,16 @@
           '</div>' +
 
           '<div class="form-section">' +
-            '<p class="sec-title"><span class="num">8</span>Próxima cita</p>' +
+            '<p class="sec-title"><span class="num">8</span>Desparasitación (opcional)</p>' +
+            '<div class="form-grid">' +
+              '<div class="field span-2"><label>Producto aplicado</label><input id="nc-desp-nombre" placeholder="Ej: Drontal, Milbemax, ivermectina…"></div>' +
+              '<div class="field span-2"><label>Próxima dosis (opcional)</label><input type="date" id="nc-desp-proxima"></div>' +
+              '<p class="hint" style="grid-column: 1 / -1; font-size:11.5px; color:var(--ink-faint); margin:0;">Esta fecha también se agenda automáticamente en el calendario como próxima cita, salvo que especifiques otra abajo.</p>' +
+            '</div>' +
+          '</div>' +
+
+          '<div class="form-section">' +
+            '<p class="sec-title"><span class="num">9</span>Próxima cita</p>' +
             '<div class="form-grid">' +
               '<div class="field"><label>Fecha sugerida (opcional)</label><input type="date" id="nc-next-date"></div>' +
               '<div class="field"><label>Hora (opcional)</label><input type="time" id="nc-next-time"></div>' +
@@ -2192,7 +2239,11 @@
           lote: overlay.querySelector('#nc-vac-lote').value.trim(),
           proximaDosis: overlay.querySelector('#nc-vac-proxima').value || null
         },
-        proximaCita: overlay.querySelector('#nc-next-date').value || overlay.querySelector('#nc-vac-proxima').value || null,
+        desparasitacion: {
+          nombre: overlay.querySelector('#nc-desp-nombre').value.trim(),
+          proximaDosis: overlay.querySelector('#nc-desp-proxima').value || null
+        },
+        proximaCita: overlay.querySelector('#nc-next-date').value || overlay.querySelector('#nc-vac-proxima').value || overlay.querySelector('#nc-desp-proxima').value || null,
         proximaCitaHora: overlay.querySelector('#nc-next-time').value || null,
         doctor: state.user ? state.user.name : ''
       };
