@@ -234,6 +234,12 @@
   .cal-day.has-cita{ background: var(--accent-soft); color: var(--accent); font-weight:700; cursor:pointer; }
   .cal-day.has-cita:hover{ filter:brightness(0.95); }
   .cal-day.selected{ background: var(--accent); color:#fff; }
+  .cal-day.has-aesthetic{
+    background: rgba(142,90,191,0.16); color: #8E5ABF; font-weight:700;
+    box-shadow: inset 0 0 0 1.5px #8E5ABF;
+  }
+  .cal-day.has-aesthetic.today{ box-shadow: inset 0 0 0 1.5px #8E5ABF, inset 0 0 0 3px var(--primary); }
+  .cal-day.has-aesthetic:hover{ filter:brightness(0.96); }
   .cal-day.has-vaccine{
     background: rgba(110,142,119,0.18); color: var(--sage); font-weight:700;
     box-shadow: inset 0 0 0 1.5px var(--sage);
@@ -256,6 +262,7 @@
   .cal-legend .dot{ width:8px; height:8px; border-radius:50%; background: var(--accent); display:inline-block; }
   .cal-legend .dot.vaccine{ background: var(--sage); }
   .cal-legend .dot.deworm{ background: var(--primary); }
+  .cal-legend .dot.aesthetic{ background: #8E5ABF; }
   .cal-vac-icon{ font-size:16px; flex-shrink:0; margin-top:1px; }
   .cal-upcoming{ margin-top:14px; border-top:1px solid var(--line); padding-top:12px; }
   .cal-upcoming .cal-up-title{ font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color: var(--ink-faint); margin-bottom:8px; }
@@ -1150,6 +1157,7 @@
       var classes = 'cal-day';
       if(dateStr === todayStr) classes += ' today';
       if(hasCita) classes += ' has-cita';
+      if(hasAesthetic) classes += ' has-aesthetic';
       if(hasVaccine) classes += ' has-vaccine';
       if(hasDeworm) classes += ' has-deworm';
       var vacIconSvg = hasVaccine ? '<span class="cal-day-vac-icon">💉</span>' : '';
@@ -1219,9 +1227,10 @@
       '</div>' +
       '<div class="cal-grid">' + dowHtml + cellsHtml + '</div>' +
       '<div class="cal-legend">' +
-        '<div class="legend-row"><span class="dot"></span> Día con cita programada</div>' +
-        '<div class="legend-row"><span class="dot vaccine"></span> Incluye vacunación</div>' +
-        '<div class="legend-row"><span class="dot deworm"></span> Incluye desparasitación</div>' +
+        '<div class="legend-row"><span class="dot"></span> Consulta médica</div>' +
+        '<div class="legend-row"><span class="dot vaccine"></span> Vacunación</div>' +
+        '<div class="legend-row"><span class="dot deworm"></span> Desparasitación</div>' +
+        '<div class="legend-row"><span class="dot aesthetic"></span> Estética</div>' +
       '</div>' +
       '<div class="cal-upcoming">' +
         '<div class="cal-up-title">Próximas citas</div>' +
