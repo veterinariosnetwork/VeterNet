@@ -250,6 +250,7 @@
   .cal-day-vac-icon{ position:absolute; bottom:0px; right:0px; font-size:13px; line-height:1; }
   .cal-day-deworm-icon{ position:absolute; bottom:0px; left:0px; font-size:13px; line-height:1; }
   .cal-day-medical-icon{ position:absolute; top:0px; right:0px; font-size:13px; line-height:1; }
+  .cal-day-aesthetic-icon{ position:absolute; top:0px; left:0px; font-size:13px; line-height:1; }
   .cal-legend{ font-size:11.5px; color: var(--ink-faint); margin-top:10px; display:flex; flex-direction:column; gap:4px; }
   .cal-legend .legend-row{ display:flex; align-items:center; gap:6px; }
   .cal-legend .dot{ width:8px; height:8px; border-radius:50%; background: var(--accent); display:inline-block; }
@@ -1153,7 +1154,7 @@
       if(hasDeworm) classes += ' has-deworm';
       var vacIconSvg = hasVaccine ? '<span class="cal-day-vac-icon">💉</span>' : '';
       var dewormIconSvg = hasDeworm ? '<span class="cal-day-deworm-icon">🪱</span>' : '';
-      var aestheticIconSvg = hasAesthetic ? '<span class="cal-day-medical-icon">🧼</span>' : '';
+      var aestheticIconSvg = hasAesthetic ? '<span class="cal-day-aesthetic-icon">🧼</span>' : '';
       var medicalIconSvg = hasMedical ? '<span class="cal-day-medical-icon">🩺</span>' : '';
       cellsHtml += '<div class="' + classes + '" data-date="' + dateStr + '">' + day + vacIconSvg + dewormIconSvg + aestheticIconSvg + medicalIconSvg + '</div>';
     }
