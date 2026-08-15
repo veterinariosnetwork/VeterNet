@@ -1159,7 +1159,7 @@
       var dayItems = citasMap[dateStr];
       var hasCita = !!dayItems;
       var hasVaccine = hasCita && dayItems.some(function(item){ return item.consult.vacuna && item.consult.vacuna.nombre; });
-      var hasDeworm = hasCita && dayItems.some(function(item){ return item.consult.desparasitacion && item.consult.desparasitacion.nombre; });
+      var hasDeworm = hasCita && dayItems.some(function(item){ return item.consult.type === 'Desparasitación' || (item.consult.desparasitacion && item.consult.desparasitacion.nombre); });
       var hasAesthetic = hasCita && dayItems.some(function(item){ return item.consult.type === 'Estética'; });
       var hasMedical = hasCita && dayItems.some(function(item){ return ['Estética','Vacunación','Desparasitación'].indexOf(item.consult.type) === -1; });
       var classes = 'cal-day';
@@ -1204,7 +1204,7 @@
         var reason = escapeHtml(u.item.consult.reason || '');
         var hora = u.item.consult.proximaCitaHora ? ' · ' + fmtTime(u.item.consult.proximaCitaHora) : '';
         var isVaccine = u.item.consult.vacuna && u.item.consult.vacuna.nombre;
-        var isDeworm = u.item.consult.desparasitacion && u.item.consult.desparasitacion.nombre;
+        var isDeworm = u.item.consult.type === 'Desparasitación' || (u.item.consult.desparasitacion && u.item.consult.desparasitacion.nombre);
         var isAesthetic = u.item.consult.type === 'Estética';
         var isMedical = ['Estética','Vacunación','Desparasitación'].indexOf(u.item.consult.type) === -1;
         var vacIcon = isVaccine ? '<span class="cal-vac-icon">💉</span>' : '';
@@ -1280,7 +1280,7 @@
       var reason = escapeHtml(item.consult.reason || '');
       var hora = item.consult.proximaCitaHora ? '<div class="d">' + fmtTime(item.consult.proximaCitaHora) + '</div>' : '';
       var isVaccine = item.consult.vacuna && item.consult.vacuna.nombre;
-      var isDeworm = item.consult.desparasitacion && item.consult.desparasitacion.nombre;
+      var isDeworm = item.consult.type === 'Desparasitación' || (item.consult.desparasitacion && item.consult.desparasitacion.nombre);
       var isAesthetic = item.consult.type === 'Estética';
       var isMedical = ['Estética','Vacunación','Desparasitación'].indexOf(item.consult.type) === -1;
       var vacIcon = isVaccine ? '<span class="cal-vac-icon">💉</span>' : '';
