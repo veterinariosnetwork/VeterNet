@@ -2119,14 +2119,12 @@
         var motivo = (c.type && c.type !== 'Consulta médica') ? c.type : (c.reason || 'su consulta');
         var fecha = fmtDate(c.proximaCita);
         var hora = c.proximaCitaHora ? fmtTime(c.proximaCitaHora) : null;
-        var doctorName = state.user ? state.user.name : '';
         var clinicName = document.getElementById('topbar-clinic-name') ? document.getElementById('topbar-clinic-name').textContent : 'nuestro consultorio';
 
         var mensaje = 'Hola ' + p.ownerName + ', le saludamos de ' + clinicName + '.\n\n' +
           'Le recordamos que ' + p.name + ' tiene una cita programada para el ' + fecha +
           (hora ? ' a las ' + hora : '') + ' para ' + motivo + '.\n\n' +
-          'Quedamos a sus órdenes ante cualquier duda.' +
-          (doctorName ? '\n\nSaludos, ' + doctorName + '.' : '');
+          'Quedamos a sus órdenes ante cualquier duda.\n\nSaludos.';
 
         var digits = (p.ownerPhone || '').replace(/\D/g, '');
         if(digits.length === 10) digits = '52' + digits;
