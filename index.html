@@ -1491,7 +1491,7 @@
               '<div class="field" id="f-qa-phone"><label>Teléfono</label><input id="qa-phone" placeholder="55 1234 5678"><p class="error">Ingresa un teléfono.</p></div>' +
             '</div>' +
             '<div class="form-grid">' +
-              '<div class="field"><label>Tipo de cita</label><select id="qa-type"><option value="Estética">Estética</option><option value="Baño">Baño</option><option value="Corte">Corte</option><option value="Consulta médica">Consulta médica</option><option value="Otro">Otro</option></select></div>' +
+              '<div class="field"><label>Tipo de cita</label><select id="qa-type"><option value="Estética">Estética</option><option value="Desparasitación">Desparasitación</option><option value="Consulta médica">Consulta médica</option><option value="Otro">Otro</option></select></div>' +
               '<div class="field" id="f-qa-date"><label>Fecha</label><input type="date" id="qa-date"><p class="error">Elige una fecha.</p></div>' +
               '<div class="field"><label>Hora (opcional)</label><input type="time" id="qa-time"></div>' +
               '<div class="field span-2"><label>Nota (opcional)</label><input id="qa-note" placeholder="Detalles breves de la cita"></div>' +
@@ -1973,7 +1973,7 @@
     return { normal:'Normal', aumentado:'Aumentado', doloroso:'Doloroso', 'no-palpable':'No palpable' }[v] || (v || '—');
   }
 
-  var NON_MEDICAL_TYPES = ['Baño', 'Estética', 'Corte'];
+  var NON_MEDICAL_TYPES = ['Estética', 'Desparasitación'];
 
   function renderConsultCard(c, isFirst){
     var g = c.exam && c.exam.ganglios ? c.exam.ganglios : {};
@@ -2074,7 +2074,7 @@
             '<p class="sec-title"><span class="num">1</span>Motivo de la consulta</p>' +
             '<div class="form-grid">' +
               '<div class="field"><label>Fecha</label><input type="date" id="nc-date" value="' + today + '"></div>' +
-              '<div class="field"><label>Tipo</label><select id="nc-type"><option value="Consulta médica">Consulta médica</option><option value="Vacunación">Vacunación</option><option value="Estética">Estética</option><option value="Baño">Baño</option><option value="Corte">Corte</option><option value="Cirugía">Cirugía</option><option value="Otro">Otro</option></select></div>' +
+              '<div class="field"><label>Tipo</label><select id="nc-type"><option value="Consulta médica">Consulta médica</option><option value="Vacunación">Vacunación</option><option value="Estética">Estética</option><option value="Desparasitación">Desparasitación</option><option value="Cirugía">Cirugía</option><option value="Otro">Otro</option></select></div>' +
               '<div class="field span-2" id="f-reason"><label>Motivo</label><input id="nc-reason" placeholder="Vómito y decaimiento desde hace 2 días"><p class="error">Describe el motivo de la consulta.</p></div>' +
             '</div>' +
           '</div>' +
