@@ -247,14 +247,15 @@
   .cal-day.has-deworm.today{ box-shadow: inset 0 0 0 1.5px var(--primary), inset 0 0 0 3px var(--sage); }
   .cal-day.has-deworm:hover{ filter:brightness(0.96); }
   .cal-day.has-vaccine.has-deworm{ background: linear-gradient(135deg, rgba(110,142,119,0.16) 50%, rgba(29,78,216,0.14) 50%); }
-  .cal-day-vac-icon{ position:absolute; bottom:1px; right:1px; font-size:9px; line-height:1; }
-  .cal-day-deworm-icon{ position:absolute; bottom:1px; left:1px; font-size:9px; line-height:1; }
+  .cal-day-vac-icon{ position:absolute; bottom:0px; right:0px; font-size:13px; line-height:1; }
+  .cal-day-deworm-icon{ position:absolute; bottom:0px; left:0px; font-size:13px; line-height:1; }
+  .cal-day-medical-icon{ position:absolute; top:0px; right:0px; font-size:13px; line-height:1; }
   .cal-legend{ font-size:11.5px; color: var(--ink-faint); margin-top:10px; display:flex; flex-direction:column; gap:4px; }
   .cal-legend .legend-row{ display:flex; align-items:center; gap:6px; }
   .cal-legend .dot{ width:8px; height:8px; border-radius:50%; background: var(--accent); display:inline-block; }
   .cal-legend .dot.vaccine{ background: var(--sage); }
   .cal-legend .dot.deworm{ background: var(--primary); }
-  .cal-vac-icon{ font-size:12px; flex-shrink:0; margin-top:1px; }
+  .cal-vac-icon{ font-size:16px; flex-shrink:0; margin-top:1px; }
   .cal-upcoming{ margin-top:14px; border-top:1px solid var(--line); padding-top:12px; }
   .cal-upcoming .cal-up-title{ font-size:11.5px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color: var(--ink-faint); margin-bottom:8px; }
   .cal-up-item{
@@ -1050,6 +1051,33 @@
     return { canino:'🐶', felino:'🐱', otro:'🥕' }[s] || '🥕';
   }
 
+  function calcAge(birthDateStr){
+    if(!birthDateStr) return '';
+    var birth = new Date(birthDateStr + 'T00:00:00');
+    if(isNaN(birth)) return '';
+    var today = new Date();
+    var years = today.getFullYear() - birth.getFullYear();
+    var months = today.getMonth() - birth.getMonth();
+    if(today.getDate() < birth.getDate()) months -= 1;
+    if(months < 0){ years -= 1; months += 12; }
+    if(years < 0) return '';
+    if(years === 0){
+      if(months <= 0) return 'Menos de 1 mes';
+      return months + (months === 1 ? ' mes' : ' meses');
+    }
+    var yearLabel = years + (years === 1 ? ' año' : ' años');
+    if(months > 0) yearLabel += ', ' + months + (months === 1 ? ' mes' : ' meses');
+    return yearLabel;
+  }
+
+  function ageDisplay(patient){
+    if(patient.birthDate){
+      var calc = calcAge(patient.birthDate);
+      if(calc) return calc + ' (aprox.)';
+    }
+    return patient.age || '—';
+  }
+
   function lastConsultationFor(patientId){
     var list = state.consultations.filter(function(c){ return c.patientId === patientId; });
     if(!list.length) return null;
@@ -1137,6 +1165,7 @@
       var hasCita = !!dayItems;
       var hasVaccine = hasCita && dayItems.some(function(item){ return item.consult.vacuna && item.consult.vacuna.nombre; });
       var hasDeworm = hasCita && dayItems.some(function(item){ return item.consult.desparasitacion && item.consult.desparasitacion.nombre; });
+      var hasMedical = hasCita && dayItems.some(function(item){ return item.consult.type === 'Consulta médica'; });
       var classes = 'cal-day';
       if(dateStr === todayStr) classes += ' today';
       if(hasCita) classes += ' has-cita';
@@ -1144,7 +1173,8 @@
       if(hasDeworm) classes += ' has-deworm';
       var vacIconSvg = hasVaccine ? '<span class="cal-day-vac-icon">💉</span>' : '';
       var dewormIconSvg = hasDeworm ? '<span class="cal-day-deworm-icon">🪱</span>' : '';
-      cellsHtml += '<div class="' + classes + '" data-date="' + dateStr + '">' + day + vacIconSvg + dewormIconSvg + '</div>';
+      var medicalIconSvg = hasMedical ? '<span class="cal-day-medical-icon">🩺</span>' : '';
+      cellsHtml += '<div class="' + classes + '" data-date="' + dateStr + '">' + day + vacIconSvg + dewormIconSvg + medicalIconSvg + '</div>';
     }
 
     var dowHtml = DOW_LABELS.map(function(d){ return '<div class="cal-dow">' + d + '</div>'; }).join('');
@@ -1177,11 +1207,14 @@
         var hora = u.item.consult.proximaCitaHora ? ' · ' + fmtTime(u.item.consult.proximaCitaHora) : '';
         var isVaccine = u.item.consult.vacuna && u.item.consult.vacuna.nombre;
         var isDeworm = u.item.consult.desparasitacion && u.item.consult.desparasitacion.nombre;
+        var isMedical = u.item.consult.type === 'Consulta médica';
         var vacIcon = isVaccine ? '<span class="cal-vac-icon">💉</span>' : '';
         var dewormIcon = isDeworm ? '<span class="cal-vac-icon">🪱</span>' : '';
+        var medicalIcon = isMedical ? '<span class="cal-vac-icon">🩺</span>' : '';
         return '<div class="cal-up-item" data-goto="' + u.item.consult.patientId + '" style="display:flex; gap:6px; align-items:flex-start;">' +
           (isVaccine ? '<span style="margin-top:2px;">' + vacIcon + '</span>' : '') +
           (isDeworm ? '<span style="margin-top:2px;">' + dewormIcon + '</span>' : '') +
+          (isMedical ? '<span style="margin-top:2px;">' + medicalIcon + '</span>' : '') +
           '<div style="flex:1;">' +
             '<div class="d">' + fmtDate(u.date) + hora + '</div>' +
             '<div class="p">' + pname + '</div>' +
@@ -1245,12 +1278,15 @@
       var hora = item.consult.proximaCitaHora ? '<div class="d">' + fmtTime(item.consult.proximaCitaHora) + '</div>' : '';
       var isVaccine = item.consult.vacuna && item.consult.vacuna.nombre;
       var isDeworm = item.consult.desparasitacion && item.consult.desparasitacion.nombre;
+      var isMedical = item.consult.type === 'Consulta médica';
       var vacIcon = isVaccine ? '<span class="cal-vac-icon">💉</span>' : '';
       var dewormIcon = isDeworm ? '<span class="cal-vac-icon">🪱</span>' : '';
+      var medicalIcon = isMedical ? '<span class="cal-vac-icon">🩺</span>' : '';
       return '<div class="cal-up-item" style="margin-bottom:8px; display:flex; align-items:flex-start; justify-content:space-between; gap:10px;">' +
         '<div data-goto="' + item.consult.patientId + '" style="cursor:pointer; flex:1; display:flex; gap:6px; align-items:flex-start;">' +
           (isVaccine ? '<span style="margin-top:2px;">' + vacIcon + '</span>' : '') +
           (isDeworm ? '<span style="margin-top:2px;">' + dewormIcon + '</span>' : '') +
+          (isMedical ? '<span style="margin-top:2px;">' + medicalIcon + '</span>' : '') +
           '<div style="flex:1;">' +
             hora +
             '<div class="p">' + pname + (owner ? ' <span style="font-weight:400;color:var(--ink-faint);">· ' + owner + '</span>' : '') + '</div>' +
@@ -1365,7 +1401,7 @@
           '<div class="row-top">' +
             '<div>' +
               '<p class="pet-name">' + speciesEmoji(p.species) + ' ' + escapeHtml(p.name) + (p.pendingCompletion ? ' <span style="font-size:10.5px; font-weight:700; color:var(--accent); background:var(--accent-soft); padding:2px 6px; border-radius:5px; vertical-align:middle;">Pendiente</span>' : '') + '</p>' +
-              '<p class="pet-meta">' + escapeHtml(p.breed || 'Raza no especificada') + ' · ' + escapeHtml(p.age || '—') + '</p>' +
+              '<p class="pet-meta">' + escapeHtml(p.breed || 'Raza no especificada') + ' · ' + escapeHtml(ageDisplay(p)) + '</p>' +
             '</div>' +
             '<span class="species-badge ' + p.species + '">' + speciesLabel(p.species) + '</span>' +
           '</div>' +
@@ -1642,7 +1678,7 @@
               '<div class="field" id="f-sex"><label>Sexo</label>' +
                 '<select id="np-sex"><option value="macho">Macho</option><option value="hembra">Hembra</option></select>' +
               '</div>' +
-              '<div class="field" id="f-age"><label>Edad</label><input id="np-age" placeholder="3 años"></div>' +
+              '<div class="field" id="f-age"><label>Fecha de nacimiento (aprox.)</label><input type="date" id="np-birthdate"></div>' +
               '<div class="field" id="f-breed"><label>Raza</label><input id="np-breed" placeholder="Mestizo"></div>' +
               '<div class="field span-2" id="f-sterilized"><label>Esterilizado</label>' +
                 '<select id="np-sterilized"><option value="si">Sí</option><option value="no">No</option><option value="desconocido">Se desconoce</option></select>' +
@@ -1685,7 +1721,7 @@
         name: name,
         species: overlay.querySelector('#np-species').value,
         sex: overlay.querySelector('#np-sex').value,
-        age: overlay.querySelector('#np-age').value.trim(),
+        birthDate: overlay.querySelector('#np-birthdate').value || null,
         breed: overlay.querySelector('#np-breed').value.trim(),
         sterilized: overlay.querySelector('#np-sterilized').value,
         ownerName: ownerName,
@@ -1738,7 +1774,7 @@
               '<div class="field" id="f-ep-sex"><label>Sexo</label>' +
                 '<select id="ep-sex"><option value="macho">Macho</option><option value="hembra">Hembra</option></select>' +
               '</div>' +
-              '<div class="field" id="f-ep-age"><label>Edad</label><input id="ep-age" placeholder="3 años"></div>' +
+              '<div class="field" id="f-ep-age"><label>Fecha de nacimiento (aprox.)</label><input type="date" id="ep-birthdate"></div>' +
               '<div class="field" id="f-ep-breed"><label>Raza</label><input id="ep-breed" placeholder="Mestizo"></div>' +
               '<div class="field span-2" id="f-ep-sterilized"><label>Esterilizado</label>' +
                 '<select id="ep-sterilized"><option value="si">Sí</option><option value="no">No</option><option value="desconocido">Se desconoce</option></select>' +
@@ -1763,7 +1799,7 @@
     overlay.querySelector('#ep-name').value = patient.name || '';
     overlay.querySelector('#ep-species').value = patient.species || 'otro';
     overlay.querySelector('#ep-sex').value = patient.sex || 'macho';
-    overlay.querySelector('#ep-age').value = patient.age || '';
+    overlay.querySelector('#ep-birthdate').value = patient.birthDate || '';
     overlay.querySelector('#ep-breed').value = patient.breed || '';
     overlay.querySelector('#ep-sterilized').value = patient.sterilized || 'desconocido';
     overlay.querySelector('#ep-owner-name').value = patient.ownerName || '';
@@ -1789,7 +1825,7 @@
         name: name,
         species: overlay.querySelector('#ep-species').value,
         sex: overlay.querySelector('#ep-sex').value,
-        age: overlay.querySelector('#ep-age').value.trim(),
+        birthDate: overlay.querySelector('#ep-birthdate').value || null,
         breed: overlay.querySelector('#ep-breed').value.trim(),
         sterilized: overlay.querySelector('#ep-sterilized').value,
         ownerName: ownerName,
@@ -1895,7 +1931,7 @@
           '<p class="pet-name">' + speciesEmoji(p.species) + ' ' + escapeHtml(p.name) + '</p>' +
           '<div class="facts">' +
             '<span><strong>Sexo:</strong> ' + escapeHtml(p.sex) + '</span>' +
-            '<span><strong>Edad:</strong> ' + escapeHtml(p.age || '—') + '</span>' +
+            '<span><strong>Edad:</strong> ' + escapeHtml(ageDisplay(p)) + '</span>' +
             '<span><strong>Raza:</strong> ' + escapeHtml(p.breed || '—') + '</span>' +
             '<span><strong>Esterilizado:</strong> ' + escapeHtml(sterilizedLabel) + '</span>' +
           '</div>' +
