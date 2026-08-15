@@ -270,6 +270,14 @@
     padding:8px 10px; border-radius:8px; background: var(--surface-sunken); margin-bottom:6px; cursor:pointer;
   }
   .cal-up-item:hover{ background: var(--primary-soft); }
+  .cal-up-item.type-vaccine{ background: rgba(110,142,119,0.14); box-shadow: inset 0 0 0 1px rgba(110,142,119,0.4); }
+  .cal-up-item.type-vaccine:hover{ background: rgba(110,142,119,0.22); }
+  .cal-up-item.type-deworm{ background: rgba(29,78,216,0.10); box-shadow: inset 0 0 0 1px rgba(29,78,216,0.35); }
+  .cal-up-item.type-deworm:hover{ background: rgba(29,78,216,0.18); }
+  .cal-up-item.type-aesthetic{ background: rgba(142,90,191,0.12); box-shadow: inset 0 0 0 1px rgba(142,90,191,0.4); }
+  .cal-up-item.type-aesthetic:hover{ background: rgba(142,90,191,0.20); }
+  .cal-up-item.type-medical{ background: var(--accent-soft); box-shadow: inset 0 0 0 1px rgba(225,29,46,0.3); }
+  .cal-up-item.type-medical:hover{ filter:brightness(0.97); }
   .cal-up-item .d{ font-size:11px; color: var(--accent); font-weight:700; }
   .cal-up-item .p{ font-size:13px; font-weight:600; color: var(--ink); }
   .cal-up-item .r{ font-size:11.5px; color: var(--ink-soft); }
@@ -1203,7 +1211,8 @@
         var dewormIcon = isDeworm ? '<span class="cal-vac-icon">🪱</span>' : '';
         var aestheticIcon = isAesthetic ? '<span class="cal-vac-icon">🧼</span>' : '';
         var medicalIcon = isMedical ? '<span class="cal-vac-icon">🩺</span>' : '';
-        return '<div class="cal-up-item" data-goto="' + u.item.consult.patientId + '" style="display:flex; gap:6px; align-items:flex-start;">' +
+        var typeClass = isVaccine ? 'type-vaccine' : isDeworm ? 'type-deworm' : isAesthetic ? 'type-aesthetic' : 'type-medical';
+        return '<div class="cal-up-item ' + typeClass + '" data-goto="' + u.item.consult.patientId + '" style="display:flex; gap:6px; align-items:flex-start;">' +
           (isVaccine ? '<span style="margin-top:2px;">' + vacIcon + '</span>' : '') +
           (isDeworm ? '<span style="margin-top:2px;">' + dewormIcon + '</span>' : '') +
           (isAesthetic ? '<span style="margin-top:2px;">' + aestheticIcon + '</span>' : '') +
@@ -1278,7 +1287,8 @@
       var dewormIcon = isDeworm ? '<span class="cal-vac-icon">🪱</span>' : '';
       var aestheticIcon = isAesthetic ? '<span class="cal-vac-icon">🧼</span>' : '';
       var medicalIcon = isMedical ? '<span class="cal-vac-icon">🩺</span>' : '';
-      return '<div class="cal-up-item" style="margin-bottom:8px; display:flex; align-items:flex-start; justify-content:space-between; gap:10px;">' +
+      var typeClass = isVaccine ? 'type-vaccine' : isDeworm ? 'type-deworm' : isAesthetic ? 'type-aesthetic' : 'type-medical';
+      return '<div class="cal-up-item ' + typeClass + '" style="margin-bottom:8px; display:flex; align-items:flex-start; justify-content:space-between; gap:10px;">' +
         '<div data-goto="' + item.consult.patientId + '" style="cursor:pointer; flex:1; display:flex; gap:6px; align-items:flex-start;">' +
           (isVaccine ? '<span style="margin-top:2px;">' + vacIcon + '</span>' : '') +
           (isDeworm ? '<span style="margin-top:2px;">' + dewormIcon + '</span>' : '') +
