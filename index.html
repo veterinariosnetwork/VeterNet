@@ -1165,7 +1165,7 @@
       var hasCita = !!dayItems;
       var hasVaccine = hasCita && dayItems.some(function(item){ return item.consult.vacuna && item.consult.vacuna.nombre; });
       var hasDeworm = hasCita && dayItems.some(function(item){ return item.consult.desparasitacion && item.consult.desparasitacion.nombre; });
-      var hasMedical = hasCita && dayItems.some(function(item){ return item.consult.type === 'Consulta médica'; });
+      var hasMedical = hasCita && dayItems.some(function(item){ return ['Estética','Vacunación','Desparasitación'].indexOf(item.consult.type) === -1; });
       var classes = 'cal-day';
       if(dateStr === todayStr) classes += ' today';
       if(hasCita) classes += ' has-cita';
@@ -1207,7 +1207,7 @@
         var hora = u.item.consult.proximaCitaHora ? ' · ' + fmtTime(u.item.consult.proximaCitaHora) : '';
         var isVaccine = u.item.consult.vacuna && u.item.consult.vacuna.nombre;
         var isDeworm = u.item.consult.desparasitacion && u.item.consult.desparasitacion.nombre;
-        var isMedical = u.item.consult.type === 'Consulta médica';
+        var isMedical = ['Estética','Vacunación','Desparasitación'].indexOf(u.item.consult.type) === -1;
         var vacIcon = isVaccine ? '<span class="cal-vac-icon">💉</span>' : '';
         var dewormIcon = isDeworm ? '<span class="cal-vac-icon">🪱</span>' : '';
         var medicalIcon = isMedical ? '<span class="cal-vac-icon">🩺</span>' : '';
@@ -1278,7 +1278,7 @@
       var hora = item.consult.proximaCitaHora ? '<div class="d">' + fmtTime(item.consult.proximaCitaHora) + '</div>' : '';
       var isVaccine = item.consult.vacuna && item.consult.vacuna.nombre;
       var isDeworm = item.consult.desparasitacion && item.consult.desparasitacion.nombre;
-      var isMedical = item.consult.type === 'Consulta médica';
+      var isMedical = ['Estética','Vacunación','Desparasitación'].indexOf(item.consult.type) === -1;
       var vacIcon = isVaccine ? '<span class="cal-vac-icon">💉</span>' : '';
       var dewormIcon = isDeworm ? '<span class="cal-vac-icon">🪱</span>' : '';
       var medicalIcon = isMedical ? '<span class="cal-vac-icon">🩺</span>' : '';
