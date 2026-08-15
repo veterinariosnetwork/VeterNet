@@ -1186,13 +1186,16 @@
         var hora = u.item.consult.proximaCitaHora ? ' · ' + fmtTime(u.item.consult.proximaCitaHora) : '';
         var isVaccine = u.item.consult.vacuna && u.item.consult.vacuna.nombre;
         var isDeworm = u.item.consult.desparasitacion && u.item.consult.desparasitacion.nombre;
+        var isAesthetic = u.item.consult.type === 'Estética';
         var isMedical = ['Estética','Vacunación','Desparasitación'].indexOf(u.item.consult.type) === -1;
         var vacIcon = isVaccine ? '<span class="cal-vac-icon">💉</span>' : '';
         var dewormIcon = isDeworm ? '<span class="cal-vac-icon">🪱</span>' : '';
+        var aestheticIcon = isAesthetic ? '<span class="cal-vac-icon">🧼</span>' : '';
         var medicalIcon = isMedical ? '<span class="cal-vac-icon">🩺</span>' : '';
         return '<div class="cal-up-item" data-goto="' + u.item.consult.patientId + '" style="display:flex; gap:6px; align-items:flex-start;">' +
           (isVaccine ? '<span style="margin-top:2px;">' + vacIcon + '</span>' : '') +
           (isDeworm ? '<span style="margin-top:2px;">' + dewormIcon + '</span>' : '') +
+          (isAesthetic ? '<span style="margin-top:2px;">' + aestheticIcon + '</span>' : '') +
           (isMedical ? '<span style="margin-top:2px;">' + medicalIcon + '</span>' : '') +
           '<div style="flex:1;">' +
             '<div class="d">' + fmtDate(u.date) + hora + '</div>' +
@@ -1257,14 +1260,17 @@
       var hora = item.consult.proximaCitaHora ? '<div class="d">' + fmtTime(item.consult.proximaCitaHora) + '</div>' : '';
       var isVaccine = item.consult.vacuna && item.consult.vacuna.nombre;
       var isDeworm = item.consult.desparasitacion && item.consult.desparasitacion.nombre;
+      var isAesthetic = item.consult.type === 'Estética';
       var isMedical = ['Estética','Vacunación','Desparasitación'].indexOf(item.consult.type) === -1;
       var vacIcon = isVaccine ? '<span class="cal-vac-icon">💉</span>' : '';
       var dewormIcon = isDeworm ? '<span class="cal-vac-icon">🪱</span>' : '';
+      var aestheticIcon = isAesthetic ? '<span class="cal-vac-icon">🧼</span>' : '';
       var medicalIcon = isMedical ? '<span class="cal-vac-icon">🩺</span>' : '';
       return '<div class="cal-up-item" style="margin-bottom:8px; display:flex; align-items:flex-start; justify-content:space-between; gap:10px;">' +
         '<div data-goto="' + item.consult.patientId + '" style="cursor:pointer; flex:1; display:flex; gap:6px; align-items:flex-start;">' +
           (isVaccine ? '<span style="margin-top:2px;">' + vacIcon + '</span>' : '') +
           (isDeworm ? '<span style="margin-top:2px;">' + dewormIcon + '</span>' : '') +
+          (isAesthetic ? '<span style="margin-top:2px;">' + aestheticIcon + '</span>' : '') +
           (isMedical ? '<span style="margin-top:2px;">' + medicalIcon + '</span>' : '') +
           '<div style="flex:1;">' +
             hora +
