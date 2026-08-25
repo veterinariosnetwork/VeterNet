@@ -187,6 +187,7 @@
     color: #EFF2EE;
     position: sticky; top:0; z-index: 20;
   }
+  .brand-group{ display:flex; align-items:center; gap:0; }
   .topbar .brand{ display:flex; flex-direction:column; gap:3px; }
   .topbar .brand .clinic-name{
     font-family: var(--font-display); font-weight:700; font-size:19px; line-height:1.1; color:#fff;
@@ -624,6 +625,7 @@
   <!-- ===================== DASHBOARD ===================== -->
   <div id="screen-dashboard" class="hidden">
     <div class="topbar">
+      <div class="brand-group">
       <img id="topbar-clinic-logo" class="hidden topbar-clinic-logo" alt="">
       <div class="brand">
         <div class="clinic-name" id="topbar-clinic-name"></div>
@@ -631,6 +633,7 @@
         <div class="mark"><img src="icon-512.png" alt="VeterNet"></div>
         <div class="name">VeterNet</div>
         </div>
+      </div>
       </div>
       <div class="doctor">
         <span class="who">Conectado como <strong id="topbar-doctor-name">—</strong></span>
@@ -683,6 +686,7 @@
   <!-- ===================== PATIENT DETAIL ===================== -->
   <div id="screen-patient" class="hidden">
     <div class="topbar">
+      <div class="brand-group">
       <img id="topbar-clinic-logo-2" class="hidden topbar-clinic-logo" alt="">
       <div class="brand">
         <div class="clinic-name" id="topbar-clinic-name-2"></div>
@@ -690,6 +694,7 @@
         <div class="mark"><img src="icon-512.png" alt="VeterNet"></div>
         <div class="name">VeterNet</div>
         </div>
+      </div>
       </div>
       <div class="doctor">
         <span class="who">Conectado como <strong id="topbar-doctor-name-2">—</strong></span>
