@@ -1165,7 +1165,7 @@
       var dateStr = year + '-' + String(month+1).padStart(2,'0') + '-' + String(day).padStart(2,'0');
       var dayItems = citasMap[dateStr];
       var hasCita = !!dayItems;
-      var hasVaccine = hasCita && dayItems.some(function(item){ return item.consult.vacuna && item.consult.vacuna.nombre; });
+      var hasVaccine = hasCita && dayItems.some(function(item){ return item.consult.type === 'Vacunación' || (item.consult.vacuna && item.consult.vacuna.nombre); });
       var hasDeworm = hasCita && dayItems.some(function(item){ return item.consult.type === 'Desparasitación' || (item.consult.desparasitacion && item.consult.desparasitacion.nombre); });
       var hasAesthetic = hasCita && dayItems.some(function(item){ return item.consult.type === 'Estética'; });
       var hasMedical = hasCita && dayItems.some(function(item){ return ['Estética','Vacunación','Desparasitación'].indexOf(item.consult.type) === -1; });
@@ -1210,7 +1210,7 @@
         var pname = u.item.patient ? escapeHtml(u.item.patient.name) : 'Paciente';
         var reason = escapeHtml(u.item.consult.reason || '');
         var hora = u.item.consult.proximaCitaHora ? ' · ' + fmtTime(u.item.consult.proximaCitaHora) : '';
-        var isVaccine = u.item.consult.vacuna && u.item.consult.vacuna.nombre;
+        var isVaccine = u.item.consult.type === 'Vacunación' || (u.item.consult.vacuna && u.item.consult.vacuna.nombre);
         var isDeworm = u.item.consult.type === 'Desparasitación' || (u.item.consult.desparasitacion && u.item.consult.desparasitacion.nombre);
         var isAesthetic = u.item.consult.type === 'Estética';
         var isMedical = ['Estética','Vacunación','Desparasitación'].indexOf(u.item.consult.type) === -1;
@@ -1286,7 +1286,7 @@
       var owner = item.patient ? escapeHtml(item.patient.ownerName || '') : '';
       var reason = escapeHtml(item.consult.reason || '');
       var hora = item.consult.proximaCitaHora ? '<div class="d">' + fmtTime(item.consult.proximaCitaHora) + '</div>' : '';
-      var isVaccine = item.consult.vacuna && item.consult.vacuna.nombre;
+      var isVaccine = item.consult.type === 'Vacunación' || (item.consult.vacuna && item.consult.vacuna.nombre);
       var isDeworm = item.consult.type === 'Desparasitación' || (item.consult.desparasitacion && item.consult.desparasitacion.nombre);
       var isAesthetic = item.consult.type === 'Estética';
       var isMedical = ['Estética','Vacunación','Desparasitación'].indexOf(item.consult.type) === -1;
@@ -1665,7 +1665,7 @@
               '<div class="field" id="f-qa-phone"><label>Teléfono</label><input id="qa-phone" placeholder="55 1234 5678"><p class="error">Ingresa un teléfono.</p></div>' +
             '</div>' +
             '<div class="form-grid">' +
-              '<div class="field"><label>Tipo de cita</label><select id="qa-type"><option value="Estética">Estética</option><option value="Desparasitación">Desparasitación</option><option value="Consulta médica">Consulta médica</option><option value="Otro">Otro</option></select></div>' +
+              '<div class="field"><label>Tipo de cita</label><select id="qa-type"><option value="Estética">Estética</option><option value="Vacunación">Vacunación</option><option value="Desparasitación">Desparasitación</option><option value="Consulta médica">Consulta médica</option><option value="Otro">Otro</option></select></div>' +
               '<div class="field" id="f-qa-date"><label>Fecha</label><input type="date" id="qa-date"><p class="error">Elige una fecha.</p></div>' +
               '<div class="field"><label>Hora (opcional)</label><input type="time" id="qa-time"></div>' +
               '<div class="field span-2"><label>Nota (opcional)</label><input id="qa-note" placeholder="Detalles breves de la cita"></div>' +
