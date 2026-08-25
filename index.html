@@ -198,6 +198,16 @@
     overflow:hidden;
   }
   .topbar .brand .mark img{ width:100%; height:100%; object-fit:cover; }
+  .topbar-clinic-logo{
+    align-self: stretch;
+    margin: -14px 14px -14px 0;
+    height: auto;
+    width: auto;
+    max-width: 64px;
+    object-fit: contain;
+    background: #fff;
+    padding: 4px;
+  }
   .topbar .brand .name{ font-family: var(--font-body); font-weight:600; font-size:11px; opacity:0.75; letter-spacing:.02em; }
   .topbar .doctor{ display:flex; align-items:center; gap:14px; }
   .topbar .doctor .who{ font-size:13.5px; color: rgba(239,242,238,0.85); }
@@ -616,8 +626,8 @@
   <!-- ===================== DASHBOARD ===================== -->
   <div id="screen-dashboard" class="hidden">
     <div class="topbar">
+      <img id="topbar-clinic-logo" class="hidden topbar-clinic-logo" alt="">
       <div class="brand">
-        <img id="topbar-clinic-logo" class="hidden" alt="" style="height:26px; width:26px; object-fit:contain; border-radius:6px; margin-right:6px; vertical-align:middle;">
         <div class="clinic-name" id="topbar-clinic-name"></div>
         <div class="app-row">
         <div class="mark"><img src="icon-512.png" alt="VeterNet"></div>
@@ -675,8 +685,8 @@
   <!-- ===================== PATIENT DETAIL ===================== -->
   <div id="screen-patient" class="hidden">
     <div class="topbar">
+      <img id="topbar-clinic-logo-2" class="hidden topbar-clinic-logo" alt="">
       <div class="brand">
-        <img id="topbar-clinic-logo-2" class="hidden" alt="" style="height:26px; width:26px; object-fit:contain; border-radius:6px; margin-right:6px; vertical-align:middle;">
         <div class="clinic-name" id="topbar-clinic-name-2"></div>
         <div class="app-row">
         <div class="mark"><img src="icon-512.png" alt="VeterNet"></div>
