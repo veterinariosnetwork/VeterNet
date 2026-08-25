@@ -637,6 +637,11 @@
       </div>
       <div class="doctor">
         <span class="who">Conectado como <strong id="topbar-doctor-name">—</strong></span>
+        <select id="admin-preview-role" class="btn btn-ghost super-admin-only hidden" style="padding:6px 10px;">
+          <option value="">Ver como: Admin</option>
+          <option value="doctor">Ver como: Médico</option>
+          <option value="estilista">Ver como: Estilista</option>
+        </select>
         <button class="btn btn-ghost admin-only hidden" id="btn-manage-clinics">Consultorios</button>
         <button class="btn btn-ghost admin-only hidden" id="btn-manage-doctors">Médicos</button>
         <button class="btn btn-ghost" id="btn-logout">Cerrar sesión</button>
@@ -698,6 +703,11 @@
       </div>
       <div class="doctor">
         <span class="who">Conectado como <strong id="topbar-doctor-name-2">—</strong></span>
+        <select id="admin-preview-role-2" class="btn btn-ghost super-admin-only hidden" style="padding:6px 10px;">
+          <option value="">Ver como: Admin</option>
+          <option value="doctor">Ver como: Médico</option>
+          <option value="estilista">Ver como: Estilista</option>
+        </select>
         <button class="btn btn-ghost admin-only hidden" id="btn-manage-clinics-2">Consultorios</button>
         <button class="btn btn-ghost admin-only hidden" id="btn-manage-doctors-2">Médicos</button>
         <button class="btn btn-ghost" id="btn-logout-2">Cerrar sesión</button>
@@ -761,7 +771,8 @@
     currentPatientId: null,
     loaded: false,
     authMode: 'login',
-    calendarViewDate: new Date()
+    calendarViewDate: new Date(),
+    previewRole: null
   };
 
   function uid(prefix){
@@ -855,21 +866,44 @@
     return profile;
   }
 
+  function effectiveRole(){
+    return (state.user && state.user.role === 'admin' && state.previewRole) ? state.previewRole : (state.user ? state.user.role : null);
+  }
+
   function toggleAdminUI(){
-    var isAdmin = !!(state.user && state.user.role === 'admin');
+    var isAdmin = effectiveRole() === 'admin';
     Array.prototype.forEach.call(document.querySelectorAll('.admin-only'), function(el){
       el.classList.toggle('hidden', !isAdmin);
+    });
+    var isRealAdmin = !!(state.user && state.user.role === 'admin');
+    Array.prototype.forEach.call(document.querySelectorAll('.super-admin-only'), function(el){
+      el.classList.toggle('hidden', !isRealAdmin);
     });
   }
 
   function applyRoleUI(){
-    var isReadOnly = !!(state.user && state.user.role === 'estilista');
+    var isReadOnly = effectiveRole() === 'estilista';
     document.body.classList.toggle('role-readonly', isReadOnly);
   }
+
+  function setPreviewRole(role){
+    state.previewRole = role || null;
+    toggleAdminUI();
+    applyRoleUI();
+    var sel1 = document.getElementById('admin-preview-role');
+    var sel2 = document.getElementById('admin-preview-role-2');
+    if(sel1) sel1.value = state.previewRole || '';
+    if(sel2) sel2.value = state.previewRole || '';
+    showToast(state.previewRole ? 'Viendo como: ' + (state.previewRole === 'doctor' ? 'Médico' : 'Estilista') : 'Vista de administrador restaurada.');
+  }
+
+  document.getElementById('admin-preview-role').addEventListener('change', function(e){ setPreviewRole(e.target.value); });
+  document.getElementById('admin-preview-role-2').addEventListener('change', function(e){ setPreviewRole(e.target.value); });
 
   auth.onAuthStateChanged(async function(user){
     if(!user){
       state.user = null;
+      state.previewRole = null;
       state.loaded = false;
       showScreen('screen-login');
       return;
