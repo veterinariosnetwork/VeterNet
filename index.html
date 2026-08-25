@@ -56,6 +56,7 @@
 
   .app{ min-height:100vh; display:flex; flex-direction:column; }
   .hidden{ display:none !important; }
+  body.role-readonly .edit-only{ display:none !important; }
 
   /* ---------- Login ---------- */
   #screen-login{
@@ -638,11 +639,11 @@
               <h1>Pacientes</h1>
             </div>
             <div style="display:flex; gap:10px;">
-              <button class="btn btn-ghost" id="btn-open-quick-appt">
+              <button class="btn btn-ghost edit-only" id="btn-open-quick-appt">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
                 Cita rápida
               </button>
-              <button class="btn btn-accent" id="btn-open-new-patient">
+              <button class="btn btn-accent edit-only" id="btn-open-new-patient">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
                 Nuevo paciente
               </button>
@@ -804,18 +805,23 @@
     var snap = await ref.get();
     var isAdmin = user.email === ADMIN_EMAIL;
     var clinicId = null;
+    var assignedRole = 'doctor';
     if(!isAdmin){
       try{
         var authDoc = await db.collection('authorizedEmails').doc(user.email).get();
-        if(authDoc.exists) clinicId = authDoc.data().clinicId || null;
+        if(authDoc.exists){
+          clinicId = authDoc.data().clinicId || null;
+          assignedRole = authDoc.data().role || 'doctor';
+        }
       }catch(e){ console.error('Error obteniendo consultorio', e); }
     }
     if(snap.exists){
       var existing = snap.data();
-      // mantener sincronizado el consultorio por si el admin lo cambió
-      if(!isAdmin && existing.clinicId !== clinicId){
-        await ref.update({ clinicId: clinicId });
+      // mantener sincronizado el consultorio y rol por si el admin lo cambió
+      if(!isAdmin && (existing.clinicId !== clinicId || existing.role !== assignedRole)){
+        await ref.update({ clinicId: clinicId, role: assignedRole });
         existing.clinicId = clinicId;
+        existing.role = assignedRole;
       }
       return existing;
     }
@@ -824,7 +830,7 @@
       uid: user.uid,
       email: user.email,
       name: nameInput || user.email,
-      role: isAdmin ? 'admin' : 'doctor',
+      role: isAdmin ? 'admin' : assignedRole,
       clinicId: clinicId,
       createdAt: new Date().toISOString()
     };
@@ -837,6 +843,11 @@
     Array.prototype.forEach.call(document.querySelectorAll('.admin-only'), function(el){
       el.classList.toggle('hidden', !isAdmin);
     });
+  }
+
+  function applyRoleUI(){
+    var isReadOnly = !!(state.user && state.user.role === 'estilista');
+    document.body.classList.toggle('role-readonly', isReadOnly);
   }
 
   auth.onAuthStateChanged(async function(user){
@@ -864,6 +875,7 @@
       document.getElementById('topbar-clinic-name').textContent = clinicText;
       document.getElementById('topbar-clinic-name-2').textContent = clinicText;
       toggleAdminUI();
+      applyRoleUI();
       if(!state.loaded){
         await loadData();
       }
@@ -1307,8 +1319,8 @@
             '<div class="r">' + reason + '</div>' +
           '</div>' +
         '</div>' +
-        '<button class="btn" data-edit-consult="' + item.consult.id + '" style="padding:5px 9px; font-size:11.5px; white-space:nowrap;">Editar</button>' +
-        '<button class="btn btn-danger" data-cancel-consult="' + item.consult.id + '" style="padding:5px 9px; font-size:11.5px; white-space:nowrap;">Cancelar</button>' +
+        '<button class="btn edit-only" data-edit-consult="' + item.consult.id + '" style="padding:5px 9px; font-size:11.5px; white-space:nowrap;">Editar</button>' +
+        '<button class="btn btn-danger edit-only" data-cancel-consult="' + item.consult.id + '" style="padding:5px 9px; font-size:11.5px; white-space:nowrap;">Cancelar</button>' +
       '</div>';
     }).join('');
     overlay.innerHTML =
@@ -1439,7 +1451,7 @@
             '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>' +
             (isOverdue ? 'Cita vencida ' : 'Próxima cita ') + fmtDate(nextDate) +
           '</span>' : '<span class="no-visits" style="border:none; padding:0;">Sin cita agendada</span>') +
-          (isOverdue || isToday ? '<button class="btn" data-mark-attended="' + nextUpcomingConsultId(p.id) + '" style="padding:2px 7px; font-size:10.5px;" title="Marcar como atendida">Atendida</button>' : '') +
+          (isOverdue || isToday ? '<button class="btn edit-only" data-mark-attended="' + nextUpcomingConsultId(p.id) + '" style="padding:2px 7px; font-size:10.5px;" title="Marcar como atendida">Atendida</button>' : '') +
           '</div>' +
           '<div style="flex:1; display:flex; justify-content:flex-end;">' + vitalsHtml + '</div>' +
         '</div>';
@@ -2061,11 +2073,11 @@
           '<p class="owner-name">' + escapeHtml(p.ownerName) + '</p>' +
           '<p class="owner-phone"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3"><path d="M22 16.9v3a2 2 0 01-2.2 2 19.8 19.8 0 01-8.6-3.1 19.5 19.5 0 01-6-6 19.8 19.8 0 01-3.1-8.7A2 2 0 014.1 2h3a2 2 0 012 1.7c.1.9.3 1.8.6 2.7a2 2 0 01-.5 2.1L8 9.7a16 16 0 006 6l1.2-1.2a2 2 0 012.1-.5c.9.3 1.8.5 2.7.6a2 2 0 011.7 2z"/></svg>' + escapeHtml(p.ownerPhone) + '</p>' +
           '<div style="display:flex; gap:8px; margin-top:12px;">' +
-            '<button class="btn btn-ghost" id="btn-edit-patient" style="padding:7px 12px; font-size:12.5px;">' +
+            '<button class="btn btn-ghost edit-only" id="btn-edit-patient" style="padding:7px 12px; font-size:12.5px;">' +
               '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>' +
               'Editar' +
             '</button>' +
-            '<button class="btn btn-danger" id="btn-delete-patient" style="padding:7px 12px; font-size:12.5px;">' +
+            '<button class="btn btn-danger edit-only" id="btn-delete-patient" style="padding:7px 12px; font-size:12.5px;">' +
               '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0-1 14a2 2 0 01-2 2H7a2 2 0 01-2-2L4 6"/></svg>' +
               'Eliminar' +
             '</button>' +
@@ -2103,7 +2115,7 @@
 
     html += '<div class="section-heading">' +
         '<h3>Historial de consultas</h3>' +
-        '<button class="btn btn-accent" id="btn-new-consult">' +
+        '<button class="btn btn-accent edit-only" id="btn-new-consult">' +
           '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>' +
           'Nueva consulta' +
         '</button>' +
@@ -2265,12 +2277,12 @@
               '<svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" style="vertical-align:-1px; margin-right:3px;"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.9 9.9 0 004.74 1.21h.01c5.46 0 9.91-4.45 9.91-9.91C21.96 6.45 17.5 2 12.04 2zm0 18.1a8.2 8.2 0 01-4.18-1.15l-.3-.18-3.12.82.83-3.04-.2-.31a8.18 8.18 0 01-1.26-4.37c0-4.53 3.69-8.22 8.23-8.22 2.2 0 4.26.86 5.82 2.41a8.17 8.17 0 012.41 5.81c0 4.54-3.7 8.23-8.23 8.23zm4.52-6.16c-.25-.12-1.47-.72-1.7-.81-.23-.08-.39-.12-.56.13-.17.24-.64.81-.78.97-.14.17-.29.19-.53.06-.25-.12-1.05-.39-2-1.23-.74-.66-1.24-1.47-1.39-1.72-.14-.24-.02-.38.11-.5.11-.11.25-.29.37-.43.12-.15.16-.24.25-.41.08-.16.04-.31-.02-.43-.06-.12-.56-1.34-.76-1.84-.2-.48-.41-.42-.56-.43-.14-.01-.31-.01-.47-.01-.17 0-.44.06-.67.31-.23.24-.87.85-.87 2.08 0 1.22.89 2.41 1.01 2.57.12.17 1.75 2.68 4.25 3.75.59.26 1.06.41 1.42.53.6.19 1.14.16 1.57.1.48-.07 1.47-.6 1.68-1.18.2-.58.2-1.08.14-1.18-.06-.1-.22-.16-.47-.28z"/></svg>' +
               'WhatsApp' +
             '</button>' : '') +
-          '<button class="btn" data-edit-next-cita="' + c.id + '" style="margin-left:8px; padding:2px 8px; font-size:10.5px;">Editar</button>' +
-          '<button class="btn btn-danger" data-cancel-next-cita="' + c.id + '" style="margin-left:8px; padding:2px 8px; font-size:10.5px;">Cancelar</button>' +
+          '<button class="btn edit-only" data-edit-next-cita="' + c.id + '" style="margin-left:8px; padding:2px 8px; font-size:10.5px;">Editar</button>' +
+          '<button class="btn btn-danger edit-only" data-cancel-next-cita="' + c.id + '" style="margin-left:8px; padding:2px 8px; font-size:10.5px;">Cancelar</button>' +
         '</span>' : '');
 
     var deleteBtnHtml = !c.proximaCita ?
-      '<button class="btn btn-danger" data-delete-consult="' + c.id + '" style="margin-left:8px; padding:2px 8px; font-size:10.5px;" title="Eliminar este registro">Borrar</button>' : '';
+      '<button class="btn btn-danger edit-only" data-delete-consult="' + c.id + '" style="margin-left:8px; padding:2px 8px; font-size:10.5px;" title="Eliminar este registro">Borrar</button>' : '';
 
     return (
       '<div class="consult-card" data-id="' + c.id + '">' +
@@ -2505,8 +2517,8 @@
             '<p class="sec-title"><span class="num">1</span>Agregar médico</p>' +
             '<div class="form-grid">' +
               '<div class="field" id="f-md-email"><label>Correo</label><input id="md-email" placeholder="doctor@clinica.com"><p class="error">Ingresa un correo válido.</p></div>' +
-              '<div class="field"><label>Rol</label><select id="md-role"><option value="doctor">Médico</option><option value="admin">Administrador</option></select></div>' +
-              '<div class="field" id="f-md-clinic"><label>Consultorio</label><input id="md-clinic" placeholder="Ej: Consultorio Centro"><p class="error">Ingresa el nombre del consultorio.</p></div>' +
+              '<div class="field"><label>Rol</label><select id="md-role"><option value="doctor">Médico</option><option value="estilista">Estilista (solo lectura)</option><option value="admin">Administrador</option></select></div>' +
+              '<div class="field" id="f-md-clinic"><label>Consultorio</label><input id="md-clinic" list="md-clinic-list" placeholder="Ej: Consultorio Centro" autocomplete="off"><datalist id="md-clinic-list"></datalist><p class="error">Ingresa el nombre del consultorio.</p></div>' +
             '</div>' +
             '<button class="btn btn-accent" id="md-add" style="margin-top:10px;">Agregar acceso</button>' +
           '</div>' +
@@ -2533,12 +2545,20 @@
         var snap = await db.collection('authorizedEmails').get();
         var rows = snap.docs.map(function(d){ return d.data(); });
         rows.sort(function(a,b){ return (a.email || '').localeCompare(b.email || ''); });
+
+        var clinics = rows.map(function(r){ return r.clinicId; }).filter(Boolean);
+        var uniqueClinics = clinics.filter(function(c, i){ return clinics.indexOf(c) === i; }).sort();
+        var clinicListEl = overlay.querySelector('#md-clinic-list');
+        if(clinicListEl){
+          clinicListEl.innerHTML = uniqueClinics.map(function(c){ return '<option value="' + escapeHtml(c) + '"></option>'; }).join('');
+        }
+
         if(!rows.length){
           listEl.innerHTML = '<p class="hint">Todavía no has agregado a nadie más. El administrador (' + escapeHtml(ADMIN_EMAIL) + ') siempre tiene acceso.</p>';
           return;
         }
         listEl.innerHTML = rows.map(function(r){
-          var roleLabel = r.role === 'admin' ? 'Administrador' : 'Médico';
+          var roleLabel = r.role === 'admin' ? 'Administrador' : (r.role === 'estilista' ? 'Estilista' : 'Médico');
           var clinicLabel = r.clinicId ? ' · ' + escapeHtml(r.clinicId) : '';
           return '<div class="kv-item" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">' +
             '<div><div class="v" style="font-family:var(--font-body); font-weight:600; font-size:13.5px;">' + escapeHtml(r.email) + '</div>' +
