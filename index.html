@@ -2227,6 +2227,16 @@
       });
     });
 
+    Array.prototype.forEach.call(container.querySelectorAll('[data-edit-full-consult]'), function(btn){
+      btn.addEventListener('click', function(e){
+        e.stopPropagation();
+        var consultId = btn.getAttribute('data-edit-full-consult');
+        var consult = state.consultations.filter(function(x){ return x.id === consultId; })[0];
+        if(!consult) return;
+        openNewConsultModal(consult.patientId, consult);
+      });
+    });
+
     Array.prototype.forEach.call(container.querySelectorAll('[data-delete-consult]'), function(btn){
       btn.addEventListener('click', async function(e){
         e.stopPropagation();
@@ -2337,12 +2347,15 @@
 
     var deleteBtnHtml = !c.proximaCita ?
       '<button class="btn btn-danger edit-only" data-delete-consult="' + c.id + '" style="margin-left:8px; padding:2px 8px; font-size:10.5px;" title="Eliminar este registro">Borrar</button>' : '';
+    var editConsultBtnHtml =
+      '<button class="btn edit-only" data-edit-full-consult="' + c.id + '" style="margin-left:8px; padding:2px 8px; font-size:10.5px;" title="Editar este registro">Editar</button>';
 
     return (
       '<div class="consult-card" data-id="' + c.id + '">' +
         '<div class="consult-top">' +
           '<div>' +
             '<div class="consult-date">' + fmtDate(c.date) + (c.doctor ? ' · ' + escapeHtml(c.doctor) : '') +
+              '<span onclick="event.stopPropagation()">' + editConsultBtnHtml + '</span>' +
               (deleteBtnHtml ? '<span onclick="event.stopPropagation()">' + deleteBtnHtml + '</span>' : '') +
             '</div>' +
             '<div class="consult-reason">' + escapeHtml(c.reason || 'Consulta general') +
@@ -2371,24 +2384,31 @@
   }
 
   /* ================== MODAL: NUEVA CONSULTA ================== */
-  function ganglioSelect(id, label){
+  function ganglioSelect(id, label, selected){
     return '<div class="field"><label>' + label + '</label>' +
       '<select id="' + id + '">' +
-        '<option value="normal">Normal</option>' +
-        '<option value="aumentado">Aumentado</option>' +
-        '<option value="doloroso">Doloroso</option>' +
-        '<option value="no-palpable">No palpable</option>' +
+        ['normal','aumentado','doloroso','no-palpable'].map(function(opt){
+          var text = { normal:'Normal', aumentado:'Aumentado', doloroso:'Doloroso', 'no-palpable':'No palpable' }[opt];
+          return '<option value="' + opt + '"' + (selected === opt ? ' selected' : '') + '>' + text + '</option>';
+        }).join('') +
       '</select></div>';
   }
 
-  function openNewConsultModal(patientId){
+  function openNewConsultModal(patientId, existing){
     var today = new Date().toISOString().slice(0,10);
+    var c = existing || {};
+    var ex = c.exam || {};
+    var g = ex.ganglios || {};
+    var vac = c.vacuna || {};
+    var desp = c.desparasitacion || {};
+    var isEdit = !!existing;
+    function v(val){ return val === undefined || val === null ? '' : val; }
     var overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
     overlay.innerHTML =
       '<div class="modal">' +
         '<div class="modal-header">' +
-          '<div><h2>Nueva consulta</h2><p class="sub">Registro clínico de la visita</p></div>' +
+          '<div><h2>' + (isEdit ? 'Editar consulta' : 'Nueva consulta') + '</h2><p class="sub">Registro clínico de la visita</p></div>' +
           '<button class="modal-close" id="nc-close" aria-label="Cerrar">' +
             '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M6 6l12 12M18 6L6 18"/></svg>' +
           '</button>' +
@@ -2398,25 +2418,37 @@
           '<div class="form-section">' +
             '<p class="sec-title"><span class="num">1</span>Motivo de la consulta</p>' +
             '<div class="form-grid">' +
-              '<div class="field"><label>Fecha</label><input type="date" id="nc-date" value="' + today + '"></div>' +
-              '<div class="field"><label>Tipo</label><select id="nc-type"><option value="Consulta médica">Consulta médica</option><option value="Vacunación">Vacunación</option><option value="Estética">Estética</option><option value="Desparasitación">Desparasitación</option><option value="Cirugía">Cirugía</option><option value="Otro">Otro</option></select></div>' +
-              '<div class="field span-2" id="f-reason"><label>Motivo</label><input id="nc-reason" placeholder="Vómito y decaimiento desde hace 2 días"><p class="error">Describe el motivo de la consulta.</p></div>' +
+              '<div class="field"><label>Fecha</label><input type="date" id="nc-date" value="' + v(c.date || today) + '"></div>' +
+              '<div class="field"><label>Tipo</label><select id="nc-type">' +
+                ['Consulta médica','Vacunación','Estética','Desparasitación','Cirugía','Otro'].map(function(t){
+                  return '<option value="' + t + '"' + (c.type === t ? ' selected' : '') + '>' + t + '</option>';
+                }).join('') +
+              '</select></div>' +
+              '<div class="field span-2" id="f-reason"><label>Motivo</label><input id="nc-reason" value="' + escapeHtml(v(c.reason)) + '" placeholder="Vómito y decaimiento desde hace 2 días"><p class="error">Describe el motivo de la consulta.</p></div>' +
             '</div>' +
           '</div>' +
 
           '<div class="form-section">' +
             '<p class="sec-title"><span class="num">2</span>Examen físico general</p>' +
             '<div class="form-grid">' +
-              '<div class="field"><label>Peso (kg)</label><input type="number" step="0.1" id="nc-peso" placeholder="4.5"></div>' +
-              '<div class="field"><label>FC (lpm)</label><input type="number" id="nc-fc" placeholder="120"></div>' +
-              '<div class="field"><label>FR (rpm)</label><input type="number" id="nc-fr" placeholder="24"></div>' +
-              '<div class="field"><label>TC (°C)</label><input type="number" step="0.1" id="nc-tc" placeholder="38.5"></div>' +
-              '<div class="field"><label>TLLC (segundos)</label><input type="number" step="0.1" id="nc-tllc" placeholder="2"></div>' +
+              '<div class="field"><label>Peso (kg)</label><input type="number" step="0.1" id="nc-peso" value="' + v(ex.peso) + '" placeholder="4.5"></div>' +
+              '<div class="field"><label>FC (lpm)</label><input type="number" id="nc-fc" value="' + v(ex.fc) + '" placeholder="120"></div>' +
+              '<div class="field"><label>FR (rpm)</label><input type="number" id="nc-fr" value="' + v(ex.fr) + '" placeholder="24"></div>' +
+              '<div class="field"><label>TC (°C)</label><input type="number" step="0.1" id="nc-tc" value="' + v(ex.tc) + '" placeholder="38.5"></div>' +
+              '<div class="field"><label>TLLC (segundos)</label><input type="number" step="0.1" id="nc-tllc" value="' + v(ex.tllc) + '" placeholder="2"></div>' +
               '<div class="field"><label>Coloración de mucosas</label>' +
-                '<select id="nc-mucosas"><option value="Rosadas">Rosadas</option><option value="Pálidas">Pálidas</option><option value="Cianóticas">Cianóticas</option><option value="Ictéricas">Ictéricas</option><option value="Congestivas">Congestivas</option></select>' +
+                '<select id="nc-mucosas">' +
+                  ['Rosadas','Pálidas','Cianóticas','Ictéricas','Congestivas'].map(function(o){
+                    return '<option value="' + o + '"' + (ex.mucosas === o ? ' selected' : '') + '>' + o + '</option>';
+                  }).join('') +
+                '</select>' +
               '</div>' +
               '<div class="field"><label>Reflejo tusígeno</label>' +
-                '<select id="nc-tusigeno"><option value="Negativo">Negativo</option><option value="Positivo">Positivo</option></select>' +
+                '<select id="nc-tusigeno">' +
+                  ['Negativo','Positivo'].map(function(o){
+                    return '<option value="' + o + '"' + (ex.reflejoTusigeno === o ? ' selected' : '') + '>' + o + '</option>';
+                  }).join('') +
+                '</select>' +
               '</div>' +
             '</div>' +
           '</div>' +
@@ -2424,38 +2456,38 @@
           '<div class="form-section">' +
             '<p class="sec-title"><span class="num">3</span>Ganglios linfáticos</p>' +
             '<div class="ganglios-grid">' +
-              ganglioSelect('nc-g-mandibulares','Mandibulares') +
-              ganglioSelect('nc-g-prescapulares','Prescapulares') +
-              ganglioSelect('nc-g-axilares','Axilares') +
-              ganglioSelect('nc-g-inguinal','Inguinal') +
-              ganglioSelect('nc-g-popliteo','Poplíteo') +
+              ganglioSelect('nc-g-mandibulares','Mandibulares', g.mandibulares) +
+              ganglioSelect('nc-g-prescapulares','Prescapulares', g.prescapulares) +
+              ganglioSelect('nc-g-axilares','Axilares', g.axilares) +
+              ganglioSelect('nc-g-inguinal','Inguinal', g.inguinal) +
+              ganglioSelect('nc-g-popliteo','Poplíteo', g.popliteo) +
             '</div>' +
           '</div>' +
 
           '<div class="form-section">' +
             '<p class="sec-title"><span class="num">4</span>Hallazgos clínicos</p>' +
-            '<div class="field"><textarea id="nc-hallazgos" placeholder="Describe los hallazgos observados durante la exploración…"></textarea></div>' +
+            '<div class="field"><textarea id="nc-hallazgos" placeholder="Describe los hallazgos observados durante la exploración…">' + escapeHtml(v(c.hallazgos)) + '</textarea></div>' +
           '</div>' +
 
           '<div class="form-section">' +
             '<p class="sec-title"><span class="num">5</span>Diagnósticos</p>' +
             '<div class="form-grid">' +
-              '<div class="field"><label>Presuntivo</label><input id="nc-diag-presuntivo" placeholder="Gastroenteritis aguda"></div>' +
-              '<div class="field"><label>Definitivo</label><input id="nc-diag-definitivo" placeholder="Pendiente de laboratorio"></div>' +
+              '<div class="field"><label>Presuntivo</label><input id="nc-diag-presuntivo" value="' + escapeHtml(v(c.diagPresuntivo)) + '" placeholder="Gastroenteritis aguda"></div>' +
+              '<div class="field"><label>Definitivo</label><input id="nc-diag-definitivo" value="' + escapeHtml(v(c.diagDefinitivo)) + '" placeholder="Pendiente de laboratorio"></div>' +
             '</div>' +
           '</div>' +
 
           '<div class="form-section">' +
             '<p class="sec-title"><span class="num">6</span>Tratamiento</p>' +
-            '<div class="field"><textarea id="nc-tratamiento" placeholder="Fármaco, dosis, vía y duración…"></textarea></div>' +
+            '<div class="field"><textarea id="nc-tratamiento" placeholder="Fármaco, dosis, vía y duración…">' + escapeHtml(v(c.tratamiento)) + '</textarea></div>' +
           '</div>' +
 
           '<div class="form-section">' +
             '<p class="sec-title"><span class="num">7</span>Vacunación (opcional)</p>' +
             '<div class="form-grid">' +
-              '<div class="field span-2"><label>Vacuna aplicada</label><input id="nc-vac-nombre" placeholder="Ej: Polivalente (DHPPi), Antirrábica, Triple felina…"></div>' +
-              '<div class="field"><label>Lote (opcional)</label><input id="nc-vac-lote" placeholder="Lote"></div>' +
-              '<div class="field"><label>Próxima dosis (opcional)</label><input type="date" id="nc-vac-proxima"></div>' +
+              '<div class="field span-2"><label>Vacuna aplicada</label><input id="nc-vac-nombre" value="' + escapeHtml(v(vac.nombre)) + '" placeholder="Ej: Polivalente (DHPPi), Antirrábica, Triple felina…"></div>' +
+              '<div class="field"><label>Lote (opcional)</label><input id="nc-vac-lote" value="' + escapeHtml(v(vac.lote)) + '" placeholder="Lote"></div>' +
+              '<div class="field"><label>Próxima dosis (opcional)</label><input type="date" id="nc-vac-proxima" value="' + v(vac.proximaDosis) + '"></div>' +
               '<p class="hint" style="grid-column: 1 / -1; font-size:11.5px; color:var(--ink-faint); margin:0;">Esta fecha también se agenda automáticamente en el calendario como próxima cita, salvo que especifiques otra abajo.</p>' +
             '</div>' +
           '</div>' +
@@ -2463,8 +2495,8 @@
           '<div class="form-section">' +
             '<p class="sec-title"><span class="num">8</span>Desparasitación (opcional)</p>' +
             '<div class="form-grid">' +
-              '<div class="field span-2"><label>Producto aplicado</label><input id="nc-desp-nombre" placeholder="Ej: Drontal, Milbemax, ivermectina…"></div>' +
-              '<div class="field span-2"><label>Próxima dosis (opcional)</label><input type="date" id="nc-desp-proxima"></div>' +
+              '<div class="field span-2"><label>Producto aplicado</label><input id="nc-desp-nombre" value="' + escapeHtml(v(desp.nombre)) + '" placeholder="Ej: Drontal, Milbemax, ivermectina…"></div>' +
+              '<div class="field span-2"><label>Próxima dosis (opcional)</label><input type="date" id="nc-desp-proxima" value="' + v(desp.proximaDosis) + '"></div>' +
               '<p class="hint" style="grid-column: 1 / -1; font-size:11.5px; color:var(--ink-faint); margin:0;">Esta fecha también se agenda automáticamente en el calendario como próxima cita, salvo que especifiques otra abajo.</p>' +
             '</div>' +
           '</div>' +
@@ -2472,15 +2504,15 @@
           '<div class="form-section">' +
             '<p class="sec-title"><span class="num">9</span>Próxima cita</p>' +
             '<div class="form-grid">' +
-              '<div class="field"><label>Fecha sugerida (opcional)</label><input type="date" id="nc-next-date"></div>' +
-              '<div class="field"><label>Hora (opcional)</label><input type="time" id="nc-next-time"></div>' +
+              '<div class="field"><label>Fecha sugerida (opcional)</label><input type="date" id="nc-next-date" value="' + v(c.proximaCita) + '"></div>' +
+              '<div class="field"><label>Hora (opcional)</label><input type="time" id="nc-next-time" value="' + v(c.proximaCitaHora) + '"></div>' +
             '</div>' +
           '</div>' +
 
         '</div>' +
         '<div class="modal-footer">' +
           '<button class="btn" id="nc-cancel">Cancelar</button>' +
-          '<button class="btn btn-primary" id="nc-save">Guardar consulta</button>' +
+          '<button class="btn btn-primary" id="nc-save">' + (isEdit ? 'Guardar cambios' : 'Guardar consulta') + '</button>' +
         '</div>' +
       '</div>';
     document.body.appendChild(overlay);
@@ -2497,9 +2529,9 @@
       if(!ok) return;
 
       var consult = {
-        id: uid('con'),
+        id: isEdit ? c.id : uid('con'),
         patientId: patientId,
-        clinicId: state.user.clinicId,
+        clinicId: isEdit ? (c.clinicId || state.user.clinicId) : state.user.clinicId,
         date: overlay.querySelector('#nc-date').value || today,
         type: overlay.querySelector('#nc-type').value,
         reason: reason,
@@ -2534,21 +2566,26 @@
         },
         proximaCita: overlay.querySelector('#nc-next-date').value || overlay.querySelector('#nc-vac-proxima').value || overlay.querySelector('#nc-desp-proxima').value || null,
         proximaCitaHora: overlay.querySelector('#nc-next-time').value || null,
-        doctor: state.user ? state.user.name : ''
+        doctor: isEdit ? (c.doctor || (state.user ? state.user.name : '')) : (state.user ? state.user.name : '')
       };
 
       var saveBtn = overlay.querySelector('#nc-save');
       saveBtn.disabled = true; saveBtn.textContent = 'Guardando…';
       try{
         await saveConsultation(consult);
-        state.consultations.push(consult);
+        if(isEdit){
+          var idx = state.consultations.findIndex(function(x){ return x.id === consult.id; });
+          if(idx > -1) state.consultations[idx] = consult; else state.consultations.push(consult);
+        } else {
+          state.consultations.push(consult);
+        }
         close();
-        showToast('Consulta registrada.');
+        showToast(isEdit ? 'Consulta actualizada.' : 'Consulta registrada.');
         renderPatientDetail();
       }catch(e){
         console.error(e);
         showToast('No se pudo guardar la consulta.');
-        saveBtn.disabled = false; saveBtn.textContent = 'Guardar consulta';
+        saveBtn.disabled = false; saveBtn.textContent = isEdit ? 'Guardar cambios' : 'Guardar consulta';
       }
     });
   }
