@@ -1478,6 +1478,7 @@
       if(last && last.exam){
         var ex = last.exam;
         var chips = [];
+        if(ex.peso) chips.push('<span class="vital-chip">Peso ' + ex.peso + '<span class="u"> kg</span></span>');
         if(ex.fc) chips.push('<span class="vital-chip">FC ' + ex.fc + '<span class="u"> lpm</span></span>');
         if(ex.fr) chips.push('<span class="vital-chip">FR ' + ex.fr + '<span class="u"> rpm</span></span>');
         if(ex.tc) chips.push('<span class="vital-chip">TC ' + ex.tc + '<span class="u"> °C</span></span>');
@@ -2294,6 +2295,7 @@
       bodyHtml =
         '<p class="block-label">Examen físico general</p>' +
         '<div class="kv-grid">' +
+          '<div class="kv-item"><div class="k">Peso</div><div class="v">' + (c.exam.peso || '—') + ' kg</div></div>' +
           '<div class="kv-item"><div class="k">FC</div><div class="v">' + (c.exam.fc || '—') + ' lpm</div></div>' +
           '<div class="kv-item"><div class="k">FR</div><div class="v">' + (c.exam.fr || '—') + ' rpm</div></div>' +
           '<div class="kv-item"><div class="k">TC</div><div class="v">' + (c.exam.tc || '—') + ' °C</div></div>' +
@@ -2405,6 +2407,7 @@
           '<div class="form-section">' +
             '<p class="sec-title"><span class="num">2</span>Examen físico general</p>' +
             '<div class="form-grid">' +
+              '<div class="field"><label>Peso (kg)</label><input type="number" step="0.1" id="nc-peso" placeholder="4.5"></div>' +
               '<div class="field"><label>FC (lpm)</label><input type="number" id="nc-fc" placeholder="120"></div>' +
               '<div class="field"><label>FR (rpm)</label><input type="number" id="nc-fr" placeholder="24"></div>' +
               '<div class="field"><label>TC (°C)</label><input type="number" step="0.1" id="nc-tc" placeholder="38.5"></div>' +
@@ -2501,6 +2504,7 @@
         type: overlay.querySelector('#nc-type').value,
         reason: reason,
         exam: {
+          peso: overlay.querySelector('#nc-peso').value.trim(),
           fc: overlay.querySelector('#nc-fc').value.trim(),
           fr: overlay.querySelector('#nc-fr').value.trim(),
           tc: overlay.querySelector('#nc-tc').value.trim(),
