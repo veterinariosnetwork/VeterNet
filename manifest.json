@@ -2,6 +2,7 @@
   "name": "VeterNet — Expedientes clínicos",
   "short_name": "VeterNet",
   "description": "Gestión de expedientes clínicos veterinarios",
+  "id": "./",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",

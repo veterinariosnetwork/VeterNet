@@ -9,10 +9,9 @@ self.addEventListener('activate', function(event){
   event.waitUntil(self.clients.claim());
 });
 
-self.addEventListener('fetch', function(event){
-  // Passthrough directo a la red — sin caché offline por ahora.
-  event.respondWith(fetch(event.request));
-});
+// Listener vacío: sin respondWith el navegador usa su red normal (sin desvío extra),
+// pero mantiene el criterio de instalación PWA en navegadores antiguos.
+self.addEventListener('fetch', function(event){});
 
 self.addEventListener('notificationclick', function(event){
   event.notification.close();
