@@ -1642,7 +1642,7 @@
           '<div class="form-section">' +
             '<div class="form-grid">' +
               '<div class="field"><label>Tipo de cita</label><select id="ec-type">' +
-                ['Estética','Desparasitación','Vacunación','Consulta médica','Cirugía','Otro'].map(function(t){
+                ['Estética','Desparasitación','Vacunación','Consulta médica','Cirugía','Fallecimiento','Otro'].map(function(t){
                   return '<option value="' + t + '"' + (c.type === t ? ' selected' : '') + '>' + t + '</option>';
                 }).join('') +
               '</select></div>' +
@@ -1731,7 +1731,7 @@
               '<div class="field" id="f-qa-phone"><label>Teléfono</label><input id="qa-phone" placeholder="55 1234 5678"><p class="error">Ingresa un teléfono.</p></div>' +
             '</div>' +
             '<div class="form-grid">' +
-              '<div class="field"><label>Tipo de cita</label><select id="qa-type"><option value="Estética">Estética</option><option value="Vacunación">Vacunación</option><option value="Desparasitación">Desparasitación</option><option value="Consulta médica">Consulta médica</option><option value="Otro">Otro</option></select></div>' +
+              '<div class="field"><label>Tipo de cita</label><select id="qa-type"><option value="Estética">Estética</option><option value="Vacunación">Vacunación</option><option value="Desparasitación">Desparasitación</option><option value="Consulta médica">Consulta médica</option><option value="Cirugía">Cirugía</option><option value="Fallecimiento">Fallecimiento</option><option value="Otro">Otro</option></select></div>' +
               '<div class="field" id="f-qa-date"><label>Fecha</label><input type="date" id="qa-date"><p class="error">Elige una fecha.</p></div>' +
               '<div class="field"><label>Hora (opcional)</label><input type="time" id="qa-time"></div>' +
               '<div class="field span-2"><label>Nota (opcional)</label><input id="qa-note" placeholder="Detalles breves de la cita"></div>' +
@@ -2421,7 +2421,7 @@
             '<div class="form-grid">' +
               '<div class="field"><label>Fecha</label><input type="date" id="nc-date" value="' + v(c.date || today) + '"></div>' +
               '<div class="field"><label>Tipo</label><select id="nc-type">' +
-                ['Consulta médica','Vacunación','Estética','Desparasitación','Cirugía','Otro'].map(function(t){
+                ['Consulta médica','Vacunación','Estética','Desparasitación','Cirugía','Fallecimiento','Otro'].map(function(t){
                   return '<option value="' + t + '"' + (c.type === t ? ' selected' : '') + '>' + t + '</option>';
                 }).join('') +
               '</select></div>' +
