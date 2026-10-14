@@ -1179,7 +1179,7 @@
   function transportFieldsHtml(prefix, t, defaultAddr){
     var on = !!(t && t.solicitado);
     var addr = (t && t.direccion) || defaultAddr || '';
-    return '<div class="field span-2"><label style="display:flex; align-items:center; gap:8px; cursor:pointer;"><input type="checkbox" id="' + prefix + '-transport" style="width:auto; margin:0;"' + (on ? ' checked' : '') + '> Solicitar transporte a la clínica</label></div>' +
+    return '<div class="field span-2"><label style="display:flex; align-items:center; gap:8px; cursor:pointer;"><input type="checkbox" id="' + prefix + '-transport" style="width:auto; margin:0;"' + (on ? ' checked' : '') + '> Programar transporte a la clínica</label></div>' +
       '<div class="field span-2' + (on ? '' : ' hidden') + '" id="f-' + prefix + '-addr"><label>Dirección de recogida</label><input id="' + prefix + '-addr" value="' + escapeHtml(addr) + '" placeholder="Calle, número, colonia"><p class="error">Ingresa la dirección de recogida.</p></div>';
   }
   function wireTransportFields(overlay, prefix){
@@ -2270,7 +2270,7 @@
         var mensaje = 'Hola ' + p.ownerName + ', le saludamos de ' + clinicName + '.\n\n' +
           'Le recordamos que ' + p.name + ' tiene una cita programada para el ' + fecha +
           (hora ? ' a las ' + hora : '') + ' para ' + motivo + '.' +
-          ((c.transporte && c.transporte.solicitado) ? '\n\nRegistramos su solicitud de transporte a la clínica' + (c.transporte.direccion ? ' (recogida en: ' + c.transporte.direccion + ')' : '') + '.' : '') + '\n\n' +
+          ((c.transporte && c.transporte.solicitado) ? '\n\nProgramamos el transporte a la clínica' + (c.transporte.direccion ? ' (recogida en: ' + c.transporte.direccion + ')' : '') + '.' : '') + '\n\n' +
           'Quedamos a sus órdenes ante cualquier duda.\n\nSaludos.';
 
         var digits = (p.ownerPhone || '').replace(/\D/g, '');
